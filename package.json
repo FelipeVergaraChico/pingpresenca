@@ -1,0 +1,45 @@
+{
+  "name": "ping-presenca",
+  "version": "0.4.0-e3",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">=22.12.0 <23"
+  },
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n api,web 'npm run dev -w backend' 'npm run dev -w frontend'",
+    "dev:tunnel": "node scripts/dev-tunnel.mjs",
+    "recover:owner": "npm run recover:owner -w backend --",
+    "test:tunnel": "node --test scripts/dev-tunnel.test.mjs",
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "test": "npm run test --workspaces",
+    "test:integration": "node scripts/integration.mjs && npm run test:regression:backend",
+    "test:regression:backend": "npm run build -w backend && node --test backend/test/review-regressions.test.mjs",
+    "test:browser": "playwright test",
+    "test:compose": "node scripts/compose-smoke.mjs",
+    "test:pilot": "node scripts/integration.mjs e3",
+    "db:migrate": "npm run db:migrate -w backend"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.3",
+    "@types/node": "^22.20.2",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "concurrently": "^9.2.4",
+    "jsdom": "^26.1.0",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.6",
+    "vitest": "^4.1.11"
+  }
+}
