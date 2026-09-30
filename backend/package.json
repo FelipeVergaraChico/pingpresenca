@@ -11,7 +11,7 @@
     "start": "node dist/server.js",
     "recover:owner": "tsx src/identity/recover-owner-cli.ts",
     "db:migrate": "tsx src/db/migrate-cli.ts",
-    "test": "tsx --test test/unit.test.ts test/attendance.unit.test.ts",
+    "test": "tsx --test test/unit.test.ts test/*.unit.test.ts",
     "test:pilot": "tsx --test test/e3.integration.test.ts",
     "test:integration": "tsx --test test/integration.test.ts && tsx --test test/e1.integration.test.ts && tsx --test test/e2.integration.test.ts && tsx --test test/e3.integration.test.ts"
   },

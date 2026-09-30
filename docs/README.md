@@ -19,6 +19,8 @@ Este conjunto descreve o produto acordado, seus critérios de aceitação e uma 
 
 ## Como interpretar
 
+Revisão adicional em 30/09/2026: [testes unitários, componentes e regressões](entregas/revisao-testes-unitarios.md), com lacunas cobertas, correção do cliente HTTP e distinção entre evidência unitária e integração real.
+
 Visualização adicional autorizada em 30/09/2026: [calendário opcional de aulas](entregas/calendario-aulas.md), com contagem mensal limitada no backend e detalhes paginados por dia.
 
 Melhoria adicional solicitada em 30/09/2026: [abas, lista compacta e paginação das aulas](entregas/paginacao-aulas.md). O documento registra também a revisão futura das demais listas acumulativas, sem declarar E4/E5 implementadas.

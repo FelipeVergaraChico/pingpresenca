@@ -272,18 +272,20 @@ Em desenvolvimento, a API também responde em `http://127.0.0.1:3000/api/health`
 Verificações locais após `npm ci`:
 
 ```sh
-npm run typecheck
-npm test
-npm run build
+npm run typecheck --registry=https://registry.npmmirror.com
+npm test --registry=https://registry.npmmirror.com
+npm run build --registry=https://registry.npmmirror.com
 ```
+
+`npm test` executa os testes unitários do backend e os testes de unidades/componentes do frontend, sem precisar de PostgreSQL, Docker ou da aplicação ligada. O backend descobre `test/*.unit.test.ts` e mantém `test/unit.test.ts`; o frontend descobre os arquivos de teste pelo Vitest. Use `npm run test -w backend --registry=https://registry.npmmirror.com` ou `npm run test -w frontend --registry=https://registry.npmmirror.com` para executar separadamente. Consulte o [inventário, resultados e limites da revisão de testes](docs/entregas/revisao-testes-unitarios.md).
 
 Os testes abaixo precisam de Docker disponível e criam bancos/containers sintéticos próprios; não exigem que a instalação padrão esteja ligada:
 
 ```sh
-npm run test:integration
-npm run test:compose
-npx playwright install chromium
-npm run test:browser
+npm run test:integration --registry=https://registry.npmmirror.com
+npm run test:compose --registry=https://registry.npmmirror.com
+npx --registry=https://registry.npmmirror.com playwright install chromium
+npm run test:browser --registry=https://registry.npmmirror.com
 ```
 
 Se já houver Chrome instalado, pode usar `PLAYWRIGHT_CHANNEL=chrome npm run test:browser` em vez de instalar Chromium. O teste de navegador utiliza as portas 3105/5175 e percorre preparação, chamada, projeção, confirmação, decisão de pendência e histórico. A geolocalização do teste é sintética pela API de emulação do navegador, não GPS físico. Os scripts limpam somente seus recursos temporários; se o Docker for interrompido, confira o alvo informado antes de qualquer limpeza manual. Consulte as [evidências e pendências da E2](docs/entregas/e2.md).

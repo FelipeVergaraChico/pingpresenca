@@ -39,7 +39,9 @@ export async function api<T>(path: string, body?: unknown): Promise<T> {
       : 'Sem resposta do servidor. A operação pode ter sido concluída; confira o estado atual antes de tentar novamente.');
   });
   if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
+    const payload: unknown = await response.json().catch(() => null);
+    const data: Record<string, unknown> = payload && typeof payload === 'object' && !Array.isArray(payload)
+      ? payload as Record<string, unknown> : {};
     const fieldErrors = Array.isArray(data.fieldErrors)
       ? data.fieldErrors.filter(
           (item: unknown): item is FieldError =>
@@ -53,9 +55,10 @@ export async function api<T>(path: string, body?: unknown): Promise<T> {
       : [];
     throw new ApiError(
       response.status,
-      data.message ?? 'Não foi possível conectar ao servidor.',
+      typeof data.message === 'string' && data.message.trim()
+        ? data.message : 'Não foi possível conectar ao servidor.',
       fieldErrors,
-      data.code,
+      typeof data.code === 'string' ? data.code : undefined,
     );
   }
   return response.status === 204 ? (undefined as T) : (response.json() as Promise<T>);
