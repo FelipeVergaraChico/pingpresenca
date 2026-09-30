@@ -153,5 +153,5 @@ export function registerAttendance(
       .parse(r.body);
     return inLesson(pool, token(r), id(r), (ctx) => manualDecision(ctx, input));
   });
-  app.get('/api/attendance/history/:id', (r) => studentHistory(pool, token(r), id(r)));
+  app.get('/api/attendance/history/:id', (r) => studentHistory(pool, token(r), id(r), r.query));
 }
