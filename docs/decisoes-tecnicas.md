@@ -10,6 +10,8 @@ As decisões da E1, incluindo convites manuais, períodos sem sobreposição, es
 
 ## 1. Direção de arquitetura
 
+Decisão adicional em 30/09/2026: [paginação de aulas e histórico](entregas/paginacao-aulas.md), incluindo contrato limitado no backend, frequência global independente da página e inventário pendente das demais listas acumulativas.
+
 ### Proposta: backend modular único, PostgreSQL como persistência principal
 
 Começar com um backend Node.js/TypeScript organizado em módulos, frontend React/TypeScript separado e PostgreSQL. O Compose coordena a instalação de referência; a aplicação recebe sua configuração por ambiente e não depende de nomes de containers para funcionar.
