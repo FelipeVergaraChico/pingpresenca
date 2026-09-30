@@ -6,11 +6,11 @@ import type { Principal } from '../identity/authorization.js';
 import { AppError } from '../platform/errors.js';
 import { checkVersion, isAdmin, notFound } from '../academic/access.js';
 import { policySnapshot } from '../academic/domain.js';
+import { parseLessonList, listLessons } from '../academic/lesson-list.js';
 import {
   AUTHORIZATION_MS,
   challenge,
   evaluateGeo,
-  frequency,
   hash,
   matches,
   reasons,
@@ -617,7 +617,7 @@ export async function attendanceView(ctx: Context) {
       : [],
   };
 }
-export async function studentHistory(pool: pg.Pool, token: string | undefined, offeringId: string) {
+export async function studentHistory(pool: pg.Pool, token: string | undefined, offeringId: string, query: unknown = {}) {
   return transaction(pool, async (c) => {
     const p = await authenticate(c, token);
     if (!p) fail('UNAUTHENTICATED', 'Entre na sua conta.', 401);
@@ -631,26 +631,18 @@ export async function studentHistory(pool: pg.Pool, token: string | undefined, o
       ).rowCount
     )
       notFound();
-    const rows = (
-      await c.query(
-        `SELECT l.id,l.title,l.starts_at,l.ends_at,l.attendance_mode,r.status,r.source,
-      CASE WHEN r.manual THEN 'Registro definido manualmente.' ELSE r.reason END AS reason,
-      (s.first_closed_at IS NOT NULL AND l.cancelled_at IS NULL) AS included,
-      l.cancelled_at IS NOT NULL AS cancelled,
-      EXISTS(SELECT 1 FROM attendance_openings o WHERE o.session_id=s.id AND o.closed_at IS NULL AND o.expires_at>clock_timestamp()) AS reopened
-      FROM lessons l
-      LEFT JOIN attendance_sessions s ON s.lesson_id=l.id LEFT JOIN attendance_records r ON r.lesson_id=l.id AND r.account_id=$2
-      WHERE l.offering_id=$1 AND EXISTS(SELECT 1 FROM enrollments e WHERE e.offering_id=l.offering_id AND e.account_id=$2
-      AND e.enrolled_at<=l.starts_at AND (e.ended_at IS NULL OR e.ended_at>l.starts_at)) ORDER BY l.starts_at,l.id`,
-        [offeringId, p.id],
-      )
-    ).rows;
+    const result = await listLessons(c, offeringId, p.id, false, parseLessonList(query), true);
     return {
-      lessons: rows.map((r) => ({
-        ...r,
-        reason: reasons[r.reason] ?? r.reason,
+      pagination: result.pagination,
+      lessons: result.items.map((r: Record<string, unknown>) => ({
+        id: r.id, title: r.title, starts_at: r.starts_at, ends_at: r.ends_at,
+        attendance_mode: r.attendance_mode, status: r.status, source: r.source,
+        included: r.included, cancelled: r.cancelled, reopened: r.reopened,
+        reason: reasons[String(r.reason)] ?? r.reason,
       })),
-      frequency: frequency(rows),
+      frequency: result.frequency.map((f: {present: number; absent: number}) => ({
+        ...f, percent: f.present + f.absent ? f.present / (f.present + f.absent) * 100 : null,
+      })),
     };
   });
 }

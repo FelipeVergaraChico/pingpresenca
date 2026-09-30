@@ -446,7 +446,7 @@ test('E1 integration: preparation, invitations, scope and integrity in real Post
           [studentId, during].sort(),
         );
         assert.equal(plan.lesson.starts_at, '2026-09-10T22:00:00.000Z');
-        assert.equal((await get(`/api/offerings/${offeringId}/lessons`, student)).json().length, 1);
+        assert.equal((await get(`/api/offerings/${offeringId}/lessons`, student)).json().items.length, 1);
         assert.equal((await get(`/api/offerings/${offeringId}/members`, student)).statusCode, 404);
         assert.equal((await get(`/api/lessons/${lessonId}/planning`, student)).statusCode, 404);
         await okPost(
@@ -543,7 +543,7 @@ test('E1 integration: preparation, invitations, scope and integrity in real Post
           admin,
         );
         assert.equal(
-          (await get(`/api/offerings/${offeringId}/lessons`, teacher)).json()[0].attendance_mode,
+          (await get(`/api/offerings/${offeringId}/lessons`, teacher)).json().items[0].attendance_mode,
           'PILOT',
         );
         // Synthetic lock markers exercise foundations; no attendance endpoint exists.
