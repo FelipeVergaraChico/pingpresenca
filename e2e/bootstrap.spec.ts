@@ -189,6 +189,7 @@ test('E0–E3: preparation, attendance, reopening, cancellation and recovery thr
       label: 'Sala de demonstração · localização obrigatória',
     });
     await teacher.getByRole('button', { name: 'Criar aula', exact: true }).click();
+    await teacher.getByRole('tab', { name: 'Histórico de aulas' }).click();
     await expect(
       teacher.getByRole('heading', { name: 'Primeiros passos', exact: true }),
     ).toBeVisible();
@@ -205,14 +206,9 @@ test('E0–E3: preparation, attendance, reopening, cancellation and recovery thr
     await student
       .getByLabel('Selecionar turma')
       .selectOption({ label: 'Programação I — 2026/2 · Piloto' });
-    await expect(
-      student.getByRole('heading', { name: 'Primeiros passos', exact: true }),
-    ).toBeVisible();
-    await expect(
-      student.getByText('10/09/2026, 19:00 até 10/09/2026, 21:00', {
-        exact: true,
-      }),
-    ).toBeVisible();
+    await student.getByRole('tab', { name: 'Minha frequência' }).click();
+    await expect(student.getByRole('link', { name: 'Primeiros passos', exact: true })).toBeVisible();
+    await expect(student.getByText(/10\/09\/2026, 19:00/)).toBeVisible();
     await expect(student.getByRole('button', { name: 'Criar aula', exact: true })).toHaveCount(0);
     await expect(
       student.getByRole('button', { name: 'Contas e convites', exact: true }),
@@ -244,6 +240,7 @@ test('E0–E3: preparation, attendance, reopening, cancellation and recovery thr
         .format(date)
         .replace(' ', 'T');
     await teacher.getByLabel('Título da aula').fill('Chamada demonstrável');
+    await teacher.getByRole('tab', { name: 'Próximas aulas' }).click();
     await teacher
       .getByLabel('Início da aula (America/Sao_Paulo)')
       .fill(localTime(new Date(Date.now() - 300000)));
@@ -315,6 +312,7 @@ test('E0–E3: preparation, attendance, reopening, cancellation and recovery thr
     await student
       .getByLabel('Selecionar turma')
       .selectOption({ label: 'Programação I — 2026/2 · Piloto' });
+    await student.getByRole('tab', { name: 'Minha frequência' }).click();
     await expect(student.getByText(/100\.0%/)).toBeVisible();
     expect((await new AxeBuilder({ page: student }).analyze()).violations).toEqual([]);
     await student.screenshot({
@@ -395,6 +393,66 @@ test('E0–E3: preparation, attendance, reopening, cancellation and recovery thr
     await student.getByLabel('Senha', { exact: true }).fill('nova-senha-sintetica-123');
     await student.getByRole('button', { name: 'Entrar', exact: true }).click();
     await expect(student.getByRole('heading', { name: 'Olá, Estudante.' })).toBeVisible();
+    // LIST-06: real paginated endpoint + responsive list + keyboard tabs.
+    const catalog = await (await teacher.request.get('/api/catalog')).json();
+    const offerings = await (await teacher.request.get('/api/offerings')).json();
+    for (let i = 0; i < 12; i++) {
+      const created = await teacher.request.post('/api/lessons', {
+        headers: { origin: 'http://localhost:5175' }, data: {
+          offeringId: offerings[0].id, locationId: catalog.locations[0].id,
+          title: `Aula planejada ${String(i + 1).padStart(2,'0')}`, description: '',
+          startsLocal: `2099-01-${String(i + 1).padStart(2,'0')}T19:00`,
+          endsLocal: `2099-01-${String(i + 1).padStart(2,'0')}T21:00`, attendanceMode: 'OFFICIAL',
+        },
+      });
+      expect(created.status()).toBe(201);
+    }
+    await teacher.goto('/');
+    await teacher.getByLabel('Selecionar turma').selectOption(offerings[0].id);
+    const lessonsPanel = teacher.getByRole('tabpanel');
+    await expect(lessonsPanel.locator('.lesson-row')).toHaveCount(10);
+    await lessonsPanel.getByRole('button', { name: 'Próxima', exact: true }).click();
+    await expect(lessonsPanel.getByRole('navigation')).toContainText('Página 2 de 2');
+    await expect(lessonsPanel.locator('.lesson-row')).toHaveCount(4);
+    await lessonsPanel.getByLabel('Modo', { exact: true }).selectOption('OFFICIAL');
+    await lessonsPanel.getByRole('button', { name: 'Aplicar filtros' }).click();
+    await expect(lessonsPanel.getByRole('navigation')).toContainText('12 aula(s) · Página 1 de 2');
+    await teacher.getByRole('tab', { name: 'Próximas aulas' }).focus();
+    await teacher.keyboard.press('ArrowRight');
+    await expect(teacher.getByRole('tab', { name: 'Histórico de aulas' })).toBeFocused();
+    await expect(lessonsPanel.getByRole('heading', { name: 'Primeiros passos' })).toBeVisible();
+    await teacher.keyboard.press('ArrowLeft');
+    await expect(lessonsPanel.locator('.lesson-row')).toHaveCount(10);
+    expect((await new AxeBuilder({ page: teacher }).analyze()).violations).toEqual([]);
+    expect(await lessonsPanel.locator('.list-filters').evaluate(el => el.getBoundingClientRect().height)).toBeLessThan(260);
+    await lessonsPanel.screenshot({ path: 'test-results/lesson-list-desktop.png' });
+    await teacher.setViewportSize({ width: 390, height: 844 });
+    expect(await teacher.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(await lessonsPanel.locator('.list-filters').evaluate(el => el.getBoundingClientRect().height)).toBeLessThan(420);
+    expect((await new AxeBuilder({ page: teacher }).analyze()).violations).toEqual([]);
+    await teacher.locator('.lesson-tabs').evaluate(el => el.scrollIntoView({ block: 'start' }));
+    await teacher.screenshot({ path: 'test-results/lesson-list-mobile.png' });
+    // CAL-05: optional month view shares filters, lesson actions and responsive layout.
+    await teacher.setViewportSize({ width: 1440, height: 1100 });
+    await lessonsPanel.getByLabel('Modo', { exact: true }).selectOption('OFFICIAL');
+    await lessonsPanel.getByRole('button', { name: 'Aplicar filtros' }).click();
+    await lessonsPanel.getByRole('button', { name: 'Calendário', exact: true }).click();
+    await lessonsPanel.getByLabel('Mês', { exact: true }).fill('2099-01');
+    const calendar = lessonsPanel.getByRole('region', { name: 'Calendário de aulas', exact: true });
+    const day = calendar.getByRole('button', { name: /1 de janeiro de 2099: 1 aula/ }).first();
+    await day.focus();
+    await teacher.keyboard.press('Enter');
+    await expect(calendar.getByRole('heading', { name: 'Aula planejada 01', exact: true })).toBeVisible();
+    await expect(calendar.getByRole('link', { name: /Gerenciar chamada/ })).toBeVisible();
+    expect((await new AxeBuilder({ page: teacher }).analyze()).violations).toEqual([]);
+    await calendar.screenshot({ path: 'test-results/lesson-calendar-desktop.png' });
+    await teacher.setViewportSize({ width: 390, height: 844 });
+    expect(await teacher.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect((await new AxeBuilder({ page: teacher }).analyze()).violations).toEqual([]);
+    await calendar.screenshot({ path: 'test-results/lesson-calendar-mobile.png' });
+    await lessonsPanel.getByRole('button', { name: 'Lista', exact: true }).click();
+    await expect(lessonsPanel.getByLabel('Modo', { exact: true })).toHaveValue('OFFICIAL');
+    await expect(lessonsPanel.locator('.lesson-row')).toHaveCount(10);
     await projection.close();
   } finally {
     await teacherContext.close();

@@ -38,6 +38,7 @@ export interface Offering {
   can_view_history?: boolean;
 }
 export interface Lesson {
+  attendance_status: string;
   id: string;
   offering_id: string;
   location_id: string;

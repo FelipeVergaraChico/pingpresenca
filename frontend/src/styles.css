@@ -699,6 +699,85 @@ details[open] > form {
   }
 }
 /* E2 uses the existing paper/forest palette; counters are not live regions. */
+.lesson-tabs { display: flex; gap: .4rem; border-bottom: 1px solid var(--line); margin: 1.25rem 0; flex-wrap: wrap; }
+.lesson-tabs button { background: transparent; color: var(--ink); border: 0; border-radius: .6rem .6rem 0 0; padding: .85rem 1rem; border-bottom: 3px solid transparent; }
+.lesson-tabs button[aria-selected="true"] { background: #e9eee1; border-bottom-color: var(--ink); font-weight: 700; }
+.list-filters { display: flex; flex-direction: row; flex-wrap: wrap; gap: .8rem; align-items: end; padding: 1rem; background: #f1f1e9; border-radius: .8rem; margin: 1rem 0; }
+.list-filters label { flex: 1 1 140px; min-width: 0; margin: 0; font-size: .875rem; }
+.list-filters input, .list-filters select { width: 100%; min-width: 0; }
+.list-filters .actions { margin: 0; }
+.list-filters .primary { width: auto; min-height: 44px; margin: 0; padding: .65rem 1rem; font-size: .85rem; }
+.list-filters-help { flex-basis: 100%; margin: 0; font-size: .8rem; }
+.lesson-list { display: grid; gap: .65rem; }
+.lesson-view-switch button[aria-pressed='true'] { background: var(--ink); color: #fffefa; }
+.lesson-calendar { border: 1px solid var(--line); border-radius: .8rem; padding: 1rem; background: #fffefa; }
+.calendar-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+.calendar-toolbar h4 { font-size: 1.2rem; margin: 0; text-transform: capitalize; }
+.calendar-toolbar .actions { align-items: end; margin: 0; }
+.calendar-toolbar input { max-width: 190px; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .4rem; }
+.calendar-weekday { text-align: center; font-size: .8rem; font-weight: 650; padding: .5rem 0; }
+.calendar-day { min-width: 0; min-height: 76px; border: 1px solid var(--line); border-radius: .5rem; background: #edf1e3; color: var(--ink); display: flex; flex-direction: column; align-items: start; justify-content: space-between; padding: .6rem; }
+.calendar-day span { font-weight: 700; }
+.calendar-day small { font-size: .75rem; }
+.calendar-day:disabled { background: transparent; color: var(--muted); opacity: 1; cursor: default; }
+.calendar-day[aria-pressed='true'] { background: var(--ink); color: #fffefa; border-color: var(--ink); }
+.calendar-details { margin-top: 1.5rem; border-top: 1px solid var(--line); padding-top: .5rem; }
+@media (max-width: 680px) {
+  .lesson-calendar { padding: .65rem; }
+  .calendar-grid { gap: .2rem; }
+  .calendar-day { padding: .3rem .15rem; min-height: 60px; align-items: center; }
+  .calendar-day small { font-size: .6rem; }
+}
+.lesson-card.lesson-row { display: flex; justify-content: space-between; align-items: center; gap: 1.25rem; padding: 1rem 1.15rem; border-radius: .8rem; }
+.lesson-row-main { min-width: 0; overflow-wrap: anywhere; }
+.lesson-row h4 { margin: .6rem 0 .3rem; font-size: 1.12rem; }
+.lesson-row p { margin: .3rem 0; font-size: .9rem; }
+.lesson-row-badges { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.lesson-row .badge, .lesson-state { font-size: .75rem; }
+.lesson-row .badge { padding: .2rem .5rem; }
+.lesson-row-actions { display: grid; gap: .4rem; flex-shrink: 0; }
+.lesson-row-actions .actions { justify-content: end; margin: 0; }
+.lesson-row-actions .compact-button { font-size: .8rem; padding: .4rem .6rem; }
+.list-pagination { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin: 1rem 0 2rem; }
+.list-pagination p { margin: 0; font-size: .9rem; }
+.list-pagination .actions { margin: 0; }
+@media (max-width: 680px) {
+  .lesson-card.lesson-row { flex-direction: column; align-items: stretch; gap: .7rem; }
+  .lesson-row-actions .actions { justify-content: start; }
+  .list-pagination { flex-wrap: wrap; }
+}
+.frequency-history { margin-top: 2rem; min-width: 0; }
+.frequency-summary { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; margin: 1.25rem 0 2rem; }
+.frequency-summary-card { padding: 1.5rem; background: #fffef9; border: 1px solid var(--line); border-top: 3px solid #8da98b; border-radius: 12px; }
+.frequency-summary-card h4 { margin: 0; color: var(--ink); font-size: 1rem; }
+.frequency-summary-card .frequency-value { margin: .75rem 0; color: var(--ink); font-size: clamp(2rem,4vw,3rem); font-weight: 650; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.frequency-summary-card .frequency-value--empty { font-size: 1.15rem; line-height: 1.5; font-weight: 500; }
+.frequency-counts, .frequency-date { color: #54635b; font-size: .875rem; line-height: 1.6; }
+.frequency-counts { margin: .75rem 0 0; }
+.frequency-list-heading { margin: 0 0 1rem; font-size: 1.1rem; }
+.frequency-lessons { list-style: none; margin: 0; padding: 0; display: grid; gap: .875rem; }
+.frequency-lesson { padding: 1.25rem 1.5rem; border: 1px solid var(--line); border-radius: 12px; background: #fffef9; min-width: 0; overflow-wrap: anywhere; }
+.frequency-lesson-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.frequency-lesson-heading > div { min-width: 0; }
+.frequency-lesson-link, .frequency-lesson-link:visited { display: inline-flex; align-items: center; gap: .75rem; min-height: 44px; color: var(--ink); font-size: 1.1rem; font-weight: 650; text-decoration: none; border-radius: 4px; }
+.frequency-lesson-link:hover { text-decoration: underline; text-underline-offset: .2em; }
+.frequency-lesson-link:focus-visible { outline: 3px solid #476d4f; outline-offset: 4px; }
+.frequency-lesson-link > span[aria-hidden] { flex-shrink: 0; }
+.frequency-date { margin: .125rem 0 0; }
+.frequency-status { display: inline-block; flex-shrink: 0; max-width: 100%; padding: .4rem .7rem; border-radius: 8px; background: #edf0eb; color: #435449; font-size: .8rem; font-weight: 600; line-height: 1.5; }
+.frequency-status[data-status="PRESENT"] { background: #e8f0df; color: #31543a; }
+.frequency-status[data-status="ABSENT"] { background: #f9e9e4; color: #863c2d; }
+.frequency-status[data-status="PENDING"] { background: #fbf0d5; color: #755619; }
+.frequency-source { margin: .75rem 0 0; font-size: .875rem; font-weight: 600; color: #435449; }
+.frequency-notice { margin: .75rem 0 0; padding-left: .75rem; border-left: 3px solid #a4b69b; font-size: .875rem; color: #435449; }
+.frequency-reason { margin: .75rem 0 0; color: #54635b; font-size: .875rem; line-height: 1.6; }
+.frequency-empty { padding: 1.5rem; border: 1px dashed var(--line); border-radius: 12px; color: #54635b; }
+@media (max-width: 640px) {
+  .frequency-summary { grid-template-columns: minmax(0,1fr); }
+  .frequency-summary-card, .frequency-lesson { padding: 1rem; }
+  .frequency-lesson-heading { flex-direction: column; gap: .75rem; }
+}
 .attendance-page { max-width: 1050px; margin: 0 auto; padding: 2rem; }
 .attendance-page h1 { margin-top: 1rem; }
 .attendance-page section, .attendance-page details { margin: 2rem 0; }

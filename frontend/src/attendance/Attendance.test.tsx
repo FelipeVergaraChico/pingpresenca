@@ -65,7 +65,7 @@ test('A38/A40/A42: QR authorization is not attendance; location only after expli
   fireEvent.click(confirm);
   expect(await screen.findByText('Localização não pôde ser validada.')).toBeInTheDocument();
   expect(geo).toHaveBeenCalledOnce();
-  expect(screen.getByRole('status')).toHaveFocus();
+  await waitFor(() => expect(screen.getByRole('status')).toHaveFocus());
 });
 test('A41/A85: uncertain response uses read-only result lookup without retaining or resending location', async () => {
   const geo = vi.fn((success: (p: unknown) => void) =>
