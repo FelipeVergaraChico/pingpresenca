@@ -1,5 +1,7 @@
 import { FormLabel, ValidationGroup } from '../FormValidation';
 import { History } from '../attendance/History';
+import { LessonList } from './LessonList';
+import { LessonTabs } from './ListControls';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import { useUiStore } from '../ui-store';
@@ -32,49 +34,43 @@ export function OfferingPanel({
   const selected = useUiStore((s) => s.offeringId),
     select = useUiStore((s) => s.selectOffering);
   const [members, setMembers] = useState<Members>({ teachers: [], enrollments: [] }),
-    [lessons, setLessons] = useState<Lesson[]>([]),
     [error, setError] = useState('');
-  const [editing, setEditing] = useState(''),
+  const [lesson, setEditing] = useState<Lesson | null>(null),
+    [tab, setTab] = useState('upcoming'),
+    [revision, setRevision] = useState(0),
     [preview, setPreview] = useState<{
       lessonTitle: string;
       students: { name: string; account_id: string }[];
       policyPreview: { name: string; radius: number; geoRequired: boolean };
     } | null>(null);
-  const offering = offerings.find((o) => o.id === selected),
-    lesson = lessons.find((l) => l.id === editing);
+  const offering = offerings.find((o) => o.id === selected);
   const currentSelection = useRef(selected);
   const previewRequest = useRef(0);
   currentSelection.current = selected;
   async function load() {
     if (!offering) return;
-    const [l, m] = await Promise.all([
-      api<Lesson[]>(`/offerings/${selected}/lessons`),
-      offering.can_manage
+    const m = await (offering.can_manage
         ? api<Members>(`/offerings/${selected}/members`)
-        : Promise.resolve({ teachers: [], enrollments: [] }),
-    ]);
+        : Promise.resolve({ teachers: [], enrollments: [] }));
     if (currentSelection.current !== offering.id) return;
-    setLessons(l);
+    setRevision((v) => v + 1);
     setMembers(m);
     setError('');
   }
   useEffect(() => {
     let alive = true;
     previewRequest.current++;
-    setLessons([]);
     setMembers({ teachers: [], enrollments: [] });
-    setEditing('');
+    setEditing(null);
+    setTab('upcoming');
     setPreview(null);
     if (offering)
-      Promise.all([
-        api<Lesson[]>(`/offerings/${offering.id}/lessons`),
-        offering.can_manage
+      (offering.can_manage
           ? api<Members>(`/offerings/${offering.id}/members`)
-          : Promise.resolve({ teachers: [], enrollments: [] }),
-      ])
-        .then(([l, m]) => {
+          : Promise.resolve({ teachers: [], enrollments: [] }))
+        .then((m) => {
           if (alive) {
-            setLessons(l);
+            setRevision((v) => v + 1);
             setMembers(m);
             setError('');
           }
@@ -317,84 +313,31 @@ export function OfferingPanel({
               </section>
             </div>
           )}
-          <section>
-            <h3>Aulas planejadas</h3>
-            {!lessons.length && (
-              <p className="empty-state">
-                Nenhuma aula disponível neste período de matrícula ou turma.
-              </p>
-            )}
-            <div className="lesson-grid">
-              {lessons.map((l) => (
-                <article className="lesson-card" key={l.id}>
-                  <span className="badge">
-                    {l.attendance_mode === 'PILOT' ? 'Piloto / teste — não oficial' : 'Oficial'}
-                  </span>
-                  <h4>{l.title}</h4>
-                  {l.cancelled_at && <p className="badge">Aula cancelada — fora da frequência</p>}
-                  <p>
-                    {displayTime(l.starts_at, timeZone)} até {displayTime(l.ends_at, timeZone)}
-                  </p>
-                  <p>{l.location_name}</p>
-                  <p>{l.description}</p>
-                  <p>
-                    <a className="action-link action-link--secondary" href={`/#attendance=${l.id}`}>
-                      <span>{offering.can_manage ? 'Gerenciar chamada' : 'Acessar chamada e meu registro'}</span>
-                      <span aria-hidden="true">→</span>
-                    </a>
-                  </p>
-                  {offering.can_manage && (
-                    <div className="actions">
-                      <button
-                        className="secondary"
-                        disabled={!!l.cancelled_at}
-                        onClick={() => {
-                          previewRequest.current++;
-                          setEditing(l.id);
-                          setPreview(null);
-                        }}
-                      >
-                        Editar {l.title}
-                      </button>
-                      <button
-                        className="secondary"
-                        onClick={async () => {
-                          const request = ++previewRequest.current;
-                          setPreview(null);
-                          try {
-                            const result = await api<NonNullable<typeof preview>>(
-                              `/lessons/${l.id}/planning`,
-                            );
-                            if (
-                              request !== previewRequest.current ||
-                              currentSelection.current !== offering.id
-                            )
-                              return;
-                            setPreview({ ...result, lessonTitle: l.title });
-                            setError('');
-                          } catch (e) {
-                            if (
-                              request !== previewRequest.current ||
-                              currentSelection.current !== offering.id
-                            )
-                              return;
-                            setError(
-                              e instanceof Error ? e.message : 'Não foi possível consultar.',
-                            );
-                          }
-                        }}
-                      >
-                        Elegibilidade de {l.title}
-                      </button>
-                    </div>
-                  )}
-                </article>
-              ))}
-            </div>
-          </section>
-          {offering.can_view_history && (
-            <History key={offering.id} offeringId={offering.id} timeZone={timeZone} />
-          )}
+          <h3>Aulas da turma</h3>
+          <LessonTabs value={tab} onChange={(next) => { setTab(next); setPreview(null); previewRequest.current++; }} tabs={[
+            { value: 'upcoming', label: 'Próximas aulas' },
+            ...(offering.can_manage ? [{ value: 'past', label: 'Histórico de aulas' }] : []),
+            ...(offering.can_view_history ? [{ value: 'frequency', label: 'Minha frequência' }] : []),
+          ]}>
+            {tab === 'frequency' && offering.can_view_history
+              ? <History key={offering.id} offeringId={offering.id} timeZone={timeZone} />
+              : <LessonList key={`${offering.id}-${tab}`} offeringId={offering.id} manages={offering.can_manage} scope={tab}
+                timeZone={timeZone} revision={revision} onEdit={(l) => {
+                  previewRequest.current++; setEditing(l); setPreview(null);
+                  document.getElementById('lesson-editor')?.scrollIntoView?.({ behavior: 'smooth' });
+                }} onPreview={async (l) => {
+                  const request = ++previewRequest.current;
+                  setPreview(null);
+                  try {
+                    const result = await api<NonNullable<typeof preview>>(`/lessons/${l.id}/planning`);
+                    if (request !== previewRequest.current || currentSelection.current !== offering.id) return;
+                    setPreview({ ...result, lessonTitle: l.title }); setError('');
+                  } catch (e) {
+                    if (request !== previewRequest.current || currentSelection.current !== offering.id) return;
+                    setError(e instanceof Error ? e.message : 'Não foi possível consultar.');
+                  }
+                }} />}
+          </LessonTabs>
           {preview && (
             <section className="message" aria-label="Prévia de elegibilidade">
               <h3>Prévia de elegibilidade</h3>
@@ -416,17 +359,23 @@ export function OfferingPanel({
             </section>
           )}
           {offering.can_manage && offering.active && (
-            <section className="editor">
+            <section className="editor" id="lesson-editor">
               <h3>{lesson ? 'Editar aula avulsa' : 'Nova aula avulsa'}</h3>
               {lesson && (
-                <button className="secondary" onClick={() => setEditing('')}>
+                <button className="secondary" onClick={() => setEditing(null)}>
                   Voltar para nova aula
                 </button>
               )}
               <ActionForm
                 key={`lesson-${selected}-${lesson?.id}-${lesson?.version}`}
                 submit={lesson ? 'Salvar aula' : 'Criar aula'}
-                onConflict={() => void load()}
+                onConflict={() => {
+                  if (!lesson) return;
+                  const id = lesson.id;
+                  void api<{lesson: Lesson}>(`/lessons/${id}/planning`).then((r) => {
+                    if (currentSelection.current === offering.id) setEditing((current) => current?.id === id ? r.lesson : current);
+                  }).catch((e) => { if (currentSelection.current === offering.id) setError(e.message); });
+                }}
                 onSave={async (data) => {
                   await api(lesson ? `/lessons/${lesson.id}` : '/lessons', {
                     offeringId: value(data, 'offeringId'),
@@ -440,7 +389,13 @@ export function OfferingPanel({
                   });
                   setPreview(null);
                   previewRequest.current++;
-                  return load;
+                  return async () => {
+                    await load();
+                    if (lesson && currentSelection.current === offering.id) {
+                      const r = await api<{lesson: Lesson}>(`/lessons/${lesson.id}/planning`);
+                      if (currentSelection.current === offering.id) setEditing((current) => current?.id === lesson.id ? r.lesson : current);
+                    }
+                  };
                 }}
               >
                 <FormLabel>

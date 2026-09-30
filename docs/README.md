@@ -19,6 +19,10 @@ Este conjunto descreve o produto acordado, seus critérios de aceitação e uma 
 
 ## Como interpretar
 
+Visualização adicional autorizada em 30/09/2026: [calendário opcional de aulas](entregas/calendario-aulas.md), com contagem mensal limitada no backend e detalhes paginados por dia.
+
+Melhoria adicional solicitada em 30/09/2026: [abas, lista compacta e paginação das aulas](entregas/paginacao-aulas.md). O documento registra também a revisão futura das demais listas acumulativas, sem declarar E4/E5 implementadas.
+
 - **Requisitos acordados:** os itens `R01` a `R29` da especificação consolidam as decisões da entrevista. Mudanças nesses requisitos devem ser explícitas e refletidas nos critérios de aceitação.
 - **Critérios de aceitação:** descrevem o que deverá ser comprovado; a presença de um cenário no documento não significa que exista teste ou implementação.
 - **Propostas técnicas:** escolhas de biblioteca, módulos, intervalos e mecanismos internos permanecem revisáveis. O documento técnico não substitui as regras de negócio.

@@ -11,7 +11,7 @@ import type { Offering } from './types';
 import { ActionForm } from './Form';
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); useUiStore.getState().reset(); });
-const json = (body: unknown) => new Response(JSON.stringify(body));
+const json = (body: unknown) => new Response(JSON.stringify(Array.isArray(body) ? { items: body, pagination: { page: 1, pages: 1, pageSize: 10, total: body.length } } : body));
 const a: Offering = {id:'a', name:'Turma A', discipline_id:'d', discipline_name:'Disciplina',
   term:'2026/1', shift:'Manhã', active:true, attendance_mode:'PILOT', version:1, can_manage:true};
 const b: Offering = {...a, id:'b', name:'Turma B',term:'2026/2',shift:'Noite',attendance_mode:'OFFICIAL'};
@@ -195,4 +195,17 @@ test('R05: actions without a refresh remain repeatable after completion, never c
   fireEvent.submit(button.closest('form')!);
   expect(save).toHaveBeenCalledTimes(2);
   await act(async () => finish());
+});
+
+test('LIST-07: paging preserves the selected lesson and unsaved edit', async () => {
+  const lesson={id:'l1',offering_id:'a',location_id:'loc',location_name:'Sala',title:'Aula original',description:'',starts_at:'2026-09-10T22:00:00Z',ends_at:'2026-09-11T00:00:00Z',attendance_mode:'PILOT',attendance_status:'NOT_OPENED',version:1,context_locked_at:null,mode_locked_at:null};
+  vi.stubGlobal('fetch',vi.fn(async (url:string) => json(url.endsWith('/members') ? {teachers:[],enrollments:[]}
+    : {items:[url.includes('page=2&') ? {...lesson,id:'l2',title:'Outra aula'} : lesson],pagination:{page:url.includes('page=2&')?2:1,pages:2,pageSize:10,total:11}})));
+  await selectA();
+  fireEvent.click(await screen.findByRole('button',{name:'Editar Aula original'}));
+  fireEvent.change(screen.getByLabelText('Título da aula'),{target:{value:'Rascunho não salvo'}});
+  fireEvent.click(screen.getByRole('button',{name:'Próxima'}));
+  await screen.findByRole('heading',{name:'Outra aula'});
+  expect(screen.getByLabelText('Título da aula')).toHaveValue('Rascunho não salvo');
+  expect(screen.getByRole('button',{name:'Salvar aula'})).toBeEnabled();
 });

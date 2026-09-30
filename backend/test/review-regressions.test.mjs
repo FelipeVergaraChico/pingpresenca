@@ -149,7 +149,7 @@ test('Review E0/E1 with isolated PostgreSQL', async (t) => {
       await ok(`/api/offerings/${offering}/teachers`,{teacherIds:[],version:2},owner);
       assert.equal((await post(`/api/lessons/${lesson}`,{...lessonBody,version:2},teacher.cookie)).statusCode,404);
       const response=await get(`/api/offerings/${offering}/lessons`,student.cookie);
-      assert.equal(response.statusCode,200); assert.equal(response.json().length,1);
+      assert.equal(response.statusCode,200); assert.equal(response.json().items.length,1);
       for(const key of ['latitude','longitude','radius','password_hash','students','teacherIds']) assert.equal(response.body.includes(`"${key}"`),false,key);
     });
     await t.test('PASS: same-version edits race, only one update and one audit event survive',async()=>{

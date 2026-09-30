@@ -7,6 +7,7 @@ import type { Principal } from '../identity/authorization.js';
 import { AppError } from '../platform/errors.js';
 import { adminOnly, checkVersion, isAdmin, managed, notFound, teachingOffering } from './access.js';
 import { plannedInstant, policySnapshot } from './domain.js';
+import { parseLessonList, listLessons } from './lesson-list.js';
 
 const uuid = z.uuid();
 const title = z.string().trim().min(2).max(160);
@@ -377,13 +378,7 @@ export function registerAcademic(
           ).rowCount)
       )
         notFound();
-      return (
-        await c.query(
-          `SELECT l.*,x.name AS location_name FROM lessons l JOIN locations x ON x.id=l.location_id WHERE l.offering_id=$1 AND
-      ($2 OR EXISTS (SELECT 1 FROM enrollments e WHERE e.offering_id=l.offering_id AND e.account_id=$3 AND e.enrolled_at<=l.starts_at AND (e.ended_at IS NULL OR e.ended_at>l.starts_at))) ORDER BY l.starts_at,l.id`,
-          [id, teaches, p.id],
-        )
-      ).rows;
+      return listLessons(c, id, p.id, teaches, parseLessonList(r.query, true));
     }),
   );
   async function saveLesson(r: FastifyRequest, existing: boolean) {

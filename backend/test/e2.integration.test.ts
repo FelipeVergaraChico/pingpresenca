@@ -545,6 +545,76 @@ test('E2 attendance with real PostgreSQL, synthetic accounts only', async (t) =>
         assert.equal(Number(seconds.duration), 420);
       },
     );
+    await t.test('LIST-01/A23/A63/A69/A73/A80: bounded SQL pages, filters, eligibility and global frequency', async () => {
+      const group = randomUUID();
+      await pool.query("INSERT INTO offerings(id,discipline_id,name,term,shift,attendance_mode) VALUES($1,$2,'Paginated','2001–2099','Night','PILOT')", [group, discipline]);
+      await pool.query('INSERT INTO offering_teachers VALUES($1,$2)', [group, teacher.id]);
+      await pool.query("INSERT INTO enrollments(id,offering_id,account_id,enrolled_at,ended_at) VALUES($1,$2,$3,'2000-01-01','2002-01-01'),($4,$2,$3,'2098-01-01',NULL)", [randomUUID(),group,students[0]!.id,randomUUID()]);
+      const ids: string[] = [];
+      for (let i = 0; i < 26; i++) {
+        const id = randomUUID(); ids.push(id);
+        const start = i === 25 ? '2005-01-01T12:00:00Z' : i < 2 ? '2001-01-01T01:00:00Z'
+          : i >= 14 ? '2099-01-01T12:00:00Z' : `2001-01-${String(i + 1).padStart(2,'0')}T12:00:00Z`;
+        await pool.query("INSERT INTO lessons(id,offering_id,location_id,title,starts_at,ends_at,attendance_mode) VALUES($1,$2,$3,$4,$5,$5::timestamptz+interval '1 hour',$6)", [id,group,location,`Pagination ${i}`,start,i < 10 ? 'PILOT' : 'OFFICIAL']);
+        if (i < 6) {
+          await pool.query('INSERT INTO attendance_sessions(id,lesson_id,first_closed_at) VALUES($1,$2,$3)', [randomUUID(),id,i === 4 ? null : '2001-02-01T00:00:00Z']);
+          await pool.query("INSERT INTO attendance_records(lesson_id,account_id,status,source,reason) VALUES($1,$2,$3,'AUTOMATIC','VALIDATED')", [id,students[0]!.id,i === 3 ? 'ABSENT' : i === 4 ? 'PENDING' : 'PRESENT']);
+        }
+      }
+      await pool.query("UPDATE lessons SET cancelled_at=clock_timestamp(),cancellation_reason='Synthetic cancellation' WHERE id=$1", [ids[5]]);
+      const list = `/api/offerings/${group}/lessons`, hist = `/api/attendance/history/${group}`;
+      const read = async (url: string, cookie = students[0]!.cookie) => { const r = await get(url,cookie); assert.equal(r.statusCode,200,r.body); return r.json(); };
+      const first = await read(list), second = await read(`${list}?page=2`), last = await read(`${list}?page=999`);
+      assert.deepEqual(first.pagination,{page:1,pages:3,pageSize:10,total:25});
+      assert.equal(first.items.length,10); assert.equal(second.items.length,10); assert.equal(last.items.length,5);
+      assert.equal(last.pagination.page,3);
+      const all = [...first.items,...second.items,...last.items];
+      assert.equal(new Set(all.map((l:any)=>l.id)).size,25);
+      assert(!all.some((l:any)=>l.id===ids[25]));
+      assert.deepEqual((await read(list)).items.map((l:any)=>l.id),first.items.map((l:any)=>l.id));
+      assert.equal((await read(list,teacher.cookie)).pagination.total,26);
+      assert.equal((await get(list,outsider.cookie)).statusCode,404);
+      assert.equal((await get(hist,students[1]!.cookie)).statusCode,404);
+      assert.equal((await get(list)).statusCode,401);
+      assert.equal((await read(`${list}?scope=past`)).pagination.total,14);
+      assert.equal((await read(`${list}?scope=upcoming`)).pagination.total,11);
+      const past = (await read(`${list}?scope=past&pageSize=50`)).items;
+      assert(past.every((l:any,i:number)=>!i || Date.parse(l.starts_at)<=Date.parse(past[i-1].starts_at)));
+      assert.equal((await read(`${list}?from=2000-12-31&to=2000-12-31`)).pagination.total,2);
+      assert.equal((await read(`${list}?mode=OFFICIAL&scope=past`)).pagination.total,4);
+      assert.equal((await read(`${list}?status=CANCELLED`)).items[0].id,ids[5]);
+      for (const query of ['page=0','page=-1','page=1.2','page=1000001','pageSize=51','pageSize=0','from=0000-01-01','from=2001-02-30','from=2001-02-01&to=2001-01-01','status=INVALID','mode=INVALID','unknown=1']) {
+        assert.equal((await get(`${list}?${query}`,students[0]!.cookie)).statusCode,400,query);
+        assert.equal((await get(`${hist}?${query}`,students[0]!.cookie)).statusCode,400,query);
+      }
+      const full = await read(hist), filtered = await read(`${hist}?pageSize=1&status=PRESENT&mode=PILOT`);
+      assert.equal(full.lessons.length,10); assert.equal(filtered.lessons.length,1);
+      assert.deepEqual(full.frequency,filtered.frequency);
+      const pilot = full.frequency.find((f:any)=>f.mode==='PILOT');
+      assert.deepEqual(pilot,{mode:'PILOT',present:3,absent:1,pending:1,provisional:true,percent:75});
+      assert.equal(full.frequency.find((f:any)=>f.mode==='OFFICIAL').percent,null);
+      assert.deepEqual((await read(`${hist}?from=2200-01-01`)).frequency,full.frequency);
+      assert.equal((await read(`${hist}?from=2200-01-01`)).pagination.total,0);
+      assert(!JSON.stringify(filtered).includes('location_id'));
+      // CAL-01: monthly counts share list permissions, filters and installation timezone.
+      const calendar = await read(`${list}?view=calendar&month=2000-12`);
+      assert.deepEqual(calendar,{month:'2000-12',days:[{date:'2000-12-31',total:2}]});
+      assert.deepEqual((await read(`${list}?view=calendar&month=2099-01`)).days,[{date:'2099-01-01',total:11}]);
+      const busyDay = await read(`${list}?from=2099-01-01&to=2099-01-01`);
+      assert.equal(busyDay.items.length,10);
+      assert.deepEqual(busyDay.pagination,{page:1,pages:2,pageSize:10,total:11});
+      assert.equal((await read(`${list}?view=calendar&month=2001-01&status=CANCELLED`)).days[0].total,1);
+      assert.deepEqual((await read(`${list}?view=calendar&month=2000-12&mode=OFFICIAL`)).days,[]);
+      assert.deepEqual((await read(`${list}?view=calendar&month=2001-01&to=2000-12-31`)).days,[]);
+      assert.deepEqual((await read(`${list}?view=calendar&month=2005-01`)).days,[]);
+      assert.equal((await read(`${list}?view=calendar&month=2005-01`,teacher.cookie)).days.length,1);
+      assert.equal((await get(`${list}?view=calendar&month=2001-01`,outsider.cookie)).statusCode,404);
+      assert.equal((await get(`${hist}?view=calendar`,students[0]!.cookie)).statusCode,400);
+      for (const month of ['0000-01','2026-13','2026-00','2026-1',"2026-01'OR1=1"])
+        assert.equal((await get(`${list}?view=calendar&month=${encodeURIComponent(month)}`,students[0]!.cookie)).statusCode,400);
+      const expectedMonth = (await pool.query("SELECT to_char(statement_timestamp() AT TIME ZONE time_zone,'YYYY-MM') AS month FROM installation")).rows[0].month;
+      assert.equal((await read(`${list}?view=calendar`)).month,expectedMonth);
+    });
   } finally {
     await app.close();
     await pool.end();
