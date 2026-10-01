@@ -2,6 +2,30 @@
 
 Software livre de chamada para comunidades de ensino. React + TypeScript + Zustand, Node.js + TypeScript e PostgreSQL. Licença **AGPL-3.0-only**.
 
+## Visão geral
+
+O Ping Presença é uma aplicação open source para gestão de presença acadêmica,
+desenvolvida com foco em integridade operacional, segurança e rastreabilidade.
+
+### Stack
+
+- Backend: Node.js, TypeScript e Fastify
+- Banco de dados: PostgreSQL
+- Frontend: React, TypeScript e Zustand
+- Infraestrutura: Docker e Docker Compose
+- Testes: testes unitários, integração com PostgreSQL e E2E com Playwright
+
+### Destaques técnicos
+
+- API REST em Node.js e TypeScript
+- Migrations SQL versionadas
+- Autenticação baseada em sessão e autorização por perfis
+- Rate limiting e validação de entrada
+- Auditoria de operações críticas
+- Testes de integração utilizando PostgreSQL real
+- Health checks e procedimentos de backup/recuperação
+- Deploy containerizado com Docker Compose
+
 ## Estado atual
 
 **E3 — Integridade operacional (`0.4.0-e3`).** Além da chamada ponta a ponta, há reabertura com novo prazo/snapshot, cancelamento auditado, troca justificada de local, recuperação assistida de acesso e comando restrito ao servidor para recuperar o owner. Consulte [operação, backup/restauração e recuperação](docs/operacao-piloto.md) e [evidências e limites](docs/entregas/e3.md). O teste humano com leitor de tela continua pendente, com lembrete em 30/09/2026 às 9h. Não é uma versão pública pronta para frequência oficial.
