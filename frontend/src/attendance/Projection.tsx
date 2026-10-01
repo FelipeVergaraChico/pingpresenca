@@ -44,6 +44,7 @@ export function Projection({ lessonId }: { lessonId: string }) {
     <main className="projection" ref={root}>
       <header className="projection-heading">
         <p className="eyebrow">PING PRESENÇA · PROJEÇÃO</p>
+        {data?.publicDemo && <p className="badge">Demonstração pública compartilhada · dados fictícios e temporários</p>}
         <h1>{data?.lesson.offering ?? 'Chamada'}</h1>
         {data && (
           <>

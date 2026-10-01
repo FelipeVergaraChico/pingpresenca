@@ -10,6 +10,8 @@ As decisões da E1, incluindo convites manuais, períodos sem sobreposição, es
 
 ## 1. Direção de arquitetura
 
+Decisão adicional em 30/09/2026: [D1 — demonstração pública](demonstracao-publica.md). Instalação descartável compartilhada, sem multi-tenancy; flag desativada por padrão mais marcador persistido, prefixo de banco e lock de ciclo de vida. Reset offline com confirmação explícita, sem rota web destrutiva; perfis sintéticos limitados e sessões normais. Não equivale a cadastro público em instalação regular.
+
 Decisão adicional em 30/09/2026: [paginação de aulas e histórico](entregas/paginacao-aulas.md), incluindo contrato limitado no backend, frequência global independente da página e inventário pendente das demais listas acumulativas.
 
 ### Proposta: backend modular único, PostgreSQL como persistência principal
@@ -138,5 +140,17 @@ Estas questões não impedem a consolidação do plano. Devem ser resolvidas **a
 | D10 | Critério quantitativo de sucesso do piloto não foi fixado. | Definir com o professor quantidade de aulas e tolerância operacional a pendências/intervenções; medir divergências e decidir antes de recomendar uso oficial. | E4. |
 
 ## 10. Registro de decisão por implementação
+
+### Seleção de local no mapa — 01/10/2026
+
+- Cadastro administrativo usa Leaflet 1.9.4 com tiles OpenStreetMap, carregados por ação explícita. Ao abrir, solicita localização do navegador para aproximar a área (HTTPS/localhost e permissão necessários); não preenche nem salva coordenadas automaticamente. Se o usuário já navegar/selecionar, uma resposta tardia não reposiciona o mapa. Negação/timeout deixa mapa, busca e campos disponíveis. Clique seleciona o ponto; campos numéricos continuam sincronizados e disponíveis sem rede. Círculo representa o raio, não uma garantia de precisão do GPS. Botão de seleção do centro removido; teclado pode utilizar resultados de busca ou coordenadas.
+- Coordenadas continuam sendo enviadas ao endpoint existente, com validação, permissões, versão e snapshots no backend inalterados. Nenhuma localização de aluno é enviada ao mapa. Não há downloads offline ou pré-carregamento em lote.
+- Busca de endereço opcional, compatível com Nominatim: `GEOCODING_URL` vazio desativa o serviço. O operador pode configurar um endpoint HTTPS `/search` e reiniciar a API, sem rebuild. Para optar pelo público: `GEOCODING_URL=https://nominatim.openstreetmap.org/search`, após ler e aceitar a [política Nominatim](https://operations.osmfoundation.org/policies/nominatim/). Esse serviço exige uso moderado, máximo agregado de 1 consulta/segundo, identificação e atribuição; proíbe autocomplete e envio de dados pessoais/confidenciais. Não há garantia de disponibilidade. O campo só consulta por botão/Enter, nunca ao digitar.
+- Proxy autenticado administrativo no backend, sem endpoint arbitrário fornecido pelo usuário; identificação da instalação no User-Agent, intervalo mínimo de 1,1 segundo e uma consulta em andamento por processo, timeout de 7 segundos e cache em memória de até 200 consultas por uma hora. O endereço é enviado ao provedor e mantido temporariamente nesse cache, não persistido no banco. A localização do dispositivo não é enviada ao geocodificador. A instalação de referência usa uma API; antes de múltiplas réplicas é obrigatório centralizar o limite/cache ou trocar de provedor. Cada operador responde pelo uso do seu endpoint.
+- Atribuição visível e cache HTTP normal do navegador, conforme [política de tiles OSM](https://operations.osmfoundation.org/policies/tiles/). O serviço público não oferece SLA; instalações com maior demanda devem avaliar outro provedor. Mapa indisponível não impede o preenchimento numérico.
+- Nginx permite imagens somente do host adicional `tile.openstreetmap.org`; Referrer-Policy passa a `strict-origin-when-cross-origin` para enviar apenas a origem ao provedor, sem caminhos, parâmetros ou fragmentos. Scripts e estilos continuam locais. Proxies externos não devem suprimir esse referer nem bloquear esses tiles.
+- A demo compartilha o componente, mas seu contrato atual não oferece administrador nem edição de locais. Expor cadastro de locais a visitantes exige decisão explícita sobre um perfil limitado; não ampliar permissões do professor silenciosamente.
+- Verificação: testes de componente para seleção, coordenadas/raio, alternativa manual, descarte do mapa, falha de tiles e bloqueio durante salvamento. Cenário Chrome completo atualizado para seleção no mapa, mas execução dependente de Docker disponível.
+- Validação em 01/10/2026: build e typecheck aprovados; Chrome isolado a 390×844 carregou quatro tiles reais, selecionou coordenadas e apresentou zero overflow horizontal. O teste integrado não iniciou porque o socket do Docker Desktop estava indisponível; não registrar esse cenário como aprovado nesta revisão.
 
 Para cada escolha relevante, registrar: problema concreto, requisito atendido, solução escolhida, alternativas consideradas, consequência operacional e teste que a valida. Evitar transformar preferências provisórias deste documento em compromissos irreversíveis sem evidência.

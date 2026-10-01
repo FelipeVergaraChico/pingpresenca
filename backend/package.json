@@ -1,6 +1,6 @@
 {
   "name": "@ping-presenca/backend",
-  "version": "0.4.0-e3",
+  "version": "0.4.1-demo",
   "private": true,
   "type": "module",
   "license": "AGPL-3.0-only",
@@ -11,8 +11,10 @@
     "start": "node dist/server.js",
     "recover:owner": "tsx src/identity/recover-owner-cli.ts",
     "db:migrate": "tsx src/db/migrate-cli.ts",
+    "demo:prepare": "tsx src/demo/prepare-cli.ts",
     "test": "tsx --test test/unit.test.ts test/*.unit.test.ts",
     "test:pilot": "tsx --test test/e3.integration.test.ts",
+    "test:demo:integration": "tsx --test test/demo.integration.test.ts",
     "test:integration": "tsx --test test/integration.test.ts && tsx --test test/e1.integration.test.ts && tsx --test test/e2.integration.test.ts && tsx --test test/e3.integration.test.ts"
   },
   "dependencies": {

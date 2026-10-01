@@ -58,6 +58,7 @@ export interface Authorization {
   geoRequired: boolean;
 }
 export interface ProjectionData {
+  publicDemo?: boolean;
   lesson: AttendanceLesson;
   serverNow: string;
   open: boolean;

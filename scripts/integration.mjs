@@ -3,9 +3,10 @@ import { execFileSync, spawn } from 'node:child_process';
 
 const suffix = randomBytes(6).toString('hex');
 const name = `pingpresenca-e0-test-${suffix}`;
-const database = `pingpresenca_test_${suffix}`;
+const demo = process.argv[2] === 'demo';
+const database = `${demo ? 'pingpresenca_demo_test_' : 'pingpresenca_test_'}${suffix}`;
 const password = randomBytes(24).toString('hex');
-const suite = process.argv[2] === 'e3' ? 'test:pilot' : 'test:integration';
+const suite = demo ? 'test:demo:integration' : process.argv[2] === 'e3' ? 'test:pilot' : 'test:integration';
 const docker = (...args) => execFileSync('docker', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 let created = false;
 try {
@@ -20,6 +21,7 @@ try {
   console.log('PostgreSQL isolado iniciado; executando testes de integração.');
   const child = spawn('npm', ['run', suite, '-w', 'backend', '--registry=https://registry.npmmirror.com'], { stdio: 'inherit', env: {
     ...process.env, NODE_ENV: 'test', PUBLIC_ORIGIN: 'http://localhost:5173', COOKIE_SECURE: 'false',
+    PUBLIC_DEMO: 'false',
     INSTALLATION_NAME: 'Instalação de teste', INSTALLATION_TIME_ZONE: 'America/Sao_Paulo',
     BOOTSTRAP_SECRET: randomBytes(32).toString('hex'),
     DATABASE_URL: `postgresql://pingtest:${password}@127.0.0.1:${port}/${database}`,

@@ -28,6 +28,8 @@ desenvolvida com foco em integridade operacional, segurança e rastreabilidade.
 
 ## Estado atual
 
+**D1 — Demonstração pública (`0.4.1-demo`).** Modo compartilhado de perfis fictícios implementado, com backend limitado e restauração offline protegida. Consulte [evidências D1](docs/entregas/d1-demonstracao-publica.md) e [preparação/operação](docs/demonstracao-publica.md). **Ainda não implantado** em `demopingpresenca.online`. A atualização acrescenta `005_public_demo.sql`: instalações existentes devem seguir manutenção e backup obrigatório antes de migrar; manter `PUBLIC_DEMO=false` no banco real. Nenhuma migration foi aplicada automaticamente na instalação do usuário.
+
 **E3 — Integridade operacional (`0.4.0-e3`).** Além da chamada ponta a ponta, há reabertura com novo prazo/snapshot, cancelamento auditado, troca justificada de local, recuperação assistida de acesso e comando restrito ao servidor para recuperar o owner. Consulte [operação, backup/restauração e recuperação](docs/operacao-piloto.md) e [evidências e limites](docs/entregas/e3.md). O teste humano com leitor de tela continua pendente, com lembrete em 30/09/2026 às 9h. Não é uma versão pública pronta para frequência oficial.
 
 A [documentação de produto](docs/README.md) é a fonte de verdade. Consulte [uso, evidências e limites da E2](docs/entregas/e2.md), [decisões da E2](docs/adr/0003-chamada-e2.md) e [referência de instalação](docs/instalacao-e0.md). Os relatórios E0/E1 permanecem como registros históricos.
@@ -273,6 +275,14 @@ docker compose up -d --wait postgres backend frontend
 Os passos acima são de **primeira instalação**, não uma receita de atualização. O procedimento oficial de atualização exige manutenção, bloqueio de escritas, **backup obrigatório antes de qualquer migration**, identificação da versão anterior, verificações e possibilidade de restaurar banco/versão anterior antes de reabrir o serviço. A implementação e validação completas seguem o [plano de entregas](docs/plano-entregas.md); não trate `git pull` seguido de migration como atualização segura da instância real.
 
 ## 3. Diagnóstico e testes
+
+### Demonstração pública dedicada
+
+O modo de demonstração oferece perfis fictícios de professor/alunos sem cadastro, em banco separado e marcado. **Não habilite `PUBLIC_DEMO` na sua instalação real.** Consulte [contrato, preparo, reset e limites](docs/demonstracao-publica.md) e o template [demo.env.example](demo.env.example). Destino planejado: `demopingpresenca.online`; desenvolvimento local não significa domínio já publicado.
+
+Validação isolada: `npm run test:demo:integration --registry=https://registry.npmmirror.com` e `PLAYWRIGHT_CHANNEL=chrome npm run test:demo:browser --registry=https://registry.npmmirror.com`. Ambos usam PostgreSQL descartável; não acessam o banco da instalação.
+
+### Diagnóstico da instalação
 
 | Sintoma | O que conferir |
 | --- | --- |

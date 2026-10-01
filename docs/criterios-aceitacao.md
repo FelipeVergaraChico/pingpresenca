@@ -169,6 +169,8 @@ As verificações manuais abaixo complementam testes automáticos; ferramenta au
 
 ## 10. Evidência de conclusão
 
+O marco adicional D1 tem os cenários [DEMO-01 a DEMO-07](demonstracao-publica.md), sem substituir nem aprovar implicitamente os cenários A01–A95.
+
 Cada entrega deve apontar quais cenários comprovou, com versão do código e tipo de evidência: teste automatizado, verificação manual, relatório de carga ou ensaio operacional. Cenários adiados continuam pendentes; não devem ser marcados como aprovados por estarem descritos aqui.
 
 Interações ainda não fechadas na entrevista estão em [decisões técnicas](decisoes-tecnicas.md), e precisam ser resolvidas antes de testar a funcionalidade afetada.

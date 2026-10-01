@@ -15,6 +15,8 @@ import { registerAcademic } from './academic/routes.js';
 import { registerAttendance } from './attendance/routes.js';
 import { registerRecovery } from './identity/recovery.js';
 import { assertSchemaReady } from './db/readiness.js';
+import { demoLease, demoStatus } from './demo/service.js';
+import { registerDemo } from './demo/routes.js';
 
 const bootstrapSchema = z.strictObject({
   name: z.string().trim().min(2).max(120),
@@ -31,15 +33,19 @@ const loginSchema = z.strictObject({
 });
 
 export async function buildApp(config: Config, pool: pg.Pool, options: { logger?: FastifyServerOptions['logger'] } = {}) {
+  const lease = await demoLease(config);
   const app = Fastify({
     logger: options.logger ?? false,
     logController: new LogController({ disableRequestLogging: true }),
     bodyLimit: 8192,
     trustProxy: false,
   });
+  app.addHook('onClose', async () => { await lease.end(); });
+  // A lost reset barrier is fatal: never keep serving after losing the installation lease.
+  lease.on('error', () => { void app.close(); });
   await app.register(cookie);
   await app.register(helmet);
-  await app.register(rateLimit, { global: false });
+  await app.register(rateLimit, { global: config.publicDemo, max: 600, timeWindow: '1 minute' });
   registerRecovery(app, pool, config, r => r.cookies[config.cookieSecure ? '__Host-ping_session' : 'ping_session']);
   const cookieName = config.cookieSecure ? '__Host-ping_session' : 'ping_session';
   const cookieOptions = {
@@ -48,6 +54,9 @@ export async function buildApp(config: Config, pool: pg.Pool, options: { logger?
     sameSite: 'strict' as const,
     path: '/',
   };
+  if (config.publicDemo) registerDemo(app, pool, r => r.cookies[cookieName], (reply, token, expiresAt) => {
+    reply.setCookie(cookieName, token, { ...cookieOptions, expires: expiresAt });
+  });
 
   app.addHook('onRequest', async (request, reply) => {
     reply.header('Cache-Control', 'no-store');
@@ -135,11 +144,12 @@ export async function buildApp(config: Config, pool: pg.Pool, options: { logger?
 
   app.get('/api/health', async () => {
     await assertSchemaReady(pool);
-    return { status: 'ok', version: '0.4.0-e3' };
+    return { status: 'ok', version: '0.4.1-demo' };
   });
   app.get('/api/installation', async () => ({
     ...(await installationStatus(pool)),
-    bootstrapAvailable: Boolean(config.bootstrapSecret),
+    ...(config.publicDemo ? { initialized: true, demo: await demoStatus(pool) } : {}),
+    bootstrapAvailable: !config.publicDemo && Boolean(config.bootstrapSecret),
   }));
   app.post(
     '/api/bootstrap',
@@ -187,13 +197,13 @@ export async function buildApp(config: Config, pool: pg.Pool, options: { logger?
     );
     return {
       ...(await installationStatus(pool)),
-      version: '0.4.0-e3',
+      version: '0.4.1-demo',
       migrations: migrations.rows,
     };
   });
   const sessionToken = (r: import('fastify').FastifyRequest) => r.cookies[cookieName];
   registerIdentityManagement(app, pool, config, sessionToken);
-  registerAcademic(app, pool, sessionToken);
+  registerAcademic(app, pool, sessionToken, config);
   registerAttendance(app, pool, config, sessionToken);
   return app;
 }

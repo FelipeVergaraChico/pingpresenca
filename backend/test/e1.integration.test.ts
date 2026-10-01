@@ -738,7 +738,7 @@ test('E1 integration: preparation, invitations, scope and integrity in real Post
             .password_hash;
           const events = (await upgradePool.query('SELECT count(*) FROM audit_events')).rows[0]
             .count;
-          assert.deepEqual(await migrate(upgradePool), ['002_academic_preparation.sql','003_attendance.sql','004_pilot_integrity.sql']);
+          assert.deepEqual(await migrate(upgradePool), ['002_academic_preparation.sql','003_attendance.sql','004_pilot_integrity.sql','005_public_demo.sql']);
           assert.equal(
             (await upgradePool.query('SELECT password_hash FROM accounts')).rows[0].password_hash,
             before,

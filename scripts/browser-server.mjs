@@ -3,6 +3,8 @@ import { execFileSync, spawn } from 'node:child_process';
 
 const name = `pingpresenca-e0-browser-${randomBytes(6).toString('hex')}`;
 const password = randomBytes(24).toString('hex');
+const demo = process.env.DEMO_BROWSER === '1';
+const database = demo ? 'pingpresenca_demo_test_browser' : 'pingpresenca_test_browser';
 const docker = (...args) => execFileSync('docker', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 const children = [];
 let created = false;
@@ -22,7 +24,7 @@ function stop() {
 }
 process.on('SIGTERM', stop); process.on('SIGINT', stop);
 try {
-  docker('run', '-d', '--name', name, '-e', 'POSTGRES_USER=pingtest', '-e', `POSTGRES_PASSWORD=${password}`, '-e', 'POSTGRES_DB=pingpresenca_test_browser', '-p', '127.0.0.1::5432', 'postgres:16-alpine');
+  docker('run', '-d', '--name', name, '-e', 'POSTGRES_USER=pingtest', '-e', `POSTGRES_PASSWORD=${password}`, '-e', `POSTGRES_DB=${database}`, '-p', '127.0.0.1::5432', 'postgres:16-alpine');
   created = true;
   let ready = false;
   for (let i = 0; i < 60; i++) {
@@ -33,9 +35,11 @@ try {
   const env = { ...process.env, NODE_ENV: 'test', API_HOST: '127.0.0.1', API_PORT: '3105',
     API_PROXY_URL: 'http://127.0.0.1:3105', PUBLIC_ORIGIN: 'http://localhost:5175', COOKIE_SECURE: 'false',
     INSTALLATION_NAME: 'Comunidade de aprendizagem', INSTALLATION_TIME_ZONE: 'America/Sao_Paulo',
-    BOOTSTRAP_SECRET: 'e0-browser-synthetic-secret-never-use-in-production',
-    DATABASE_URL: `postgresql://pingtest:${password}@127.0.0.1:${port}/pingpresenca_test_browser` };
+    BOOTSTRAP_SECRET: demo ? '' : 'e0-browser-synthetic-secret-never-use-in-production',
+    PUBLIC_DEMO: demo ? 'true' : 'false',
+    DATABASE_URL: `postgresql://pingtest:${password}@127.0.0.1:${port}/${database}` };
   execFileSync(process.execPath, ['--import', 'tsx', 'backend/src/db/migrate-cli.ts'], { env, stdio: 'inherit' });
+  if (demo) execFileSync(process.execPath, ['--import', 'tsx', 'backend/src/demo/prepare-cli.ts'], { env, stdio: 'inherit' });
   children.push(spawn(process.execPath, ['--import', 'tsx', 'backend/src/server.ts'], { env, stdio: 'inherit' }));
   children.push(spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'frontend', '--host', '127.0.0.1', '--port', '5175'], { env, stdio: 'inherit' }));
   for (const child of children) child.on('exit', () => {

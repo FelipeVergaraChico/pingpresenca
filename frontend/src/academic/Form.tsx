@@ -69,6 +69,7 @@ export function ActionForm({
     <FormValidation.Provider value={fieldErrors}>
       <form
         ref={form}
+        onInput={() => { if (!pendingRefresh) { setSaved(false); setNotice(''); } }}
         onChange={() => { if (!pendingRefresh) { setSaved(false); setNotice(''); } }}
         onSubmit={async (e) => {
           e.preventDefault();

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { api } from '../api';
 import { ActionForm, Field, value } from './Form';
 import type { Catalog } from './types';
+import { LocationPicker } from './LocationPicker';
 
 export function CatalogPanel({
   catalog,
@@ -86,32 +87,7 @@ export function CatalogPanel({
             }}
           >
             <Field label="Nome do local" name="name" initial={location?.name} />
-            <Field
-              label="Latitude do local"
-              name="latitude"
-              type="number"
-              min={-90}
-              max={90}
-              step="any"
-              initial={location?.latitude}
-            />
-            <Field
-              label="Longitude do local"
-              name="longitude"
-              type="number"
-              min={-180}
-              max={180}
-              step="any"
-              initial={location?.longitude}
-            />
-            <Field
-              label="Raio permitido (metros)"
-              name="radius"
-              type="number"
-              min="0.01"
-              step="any"
-              initial={location?.radius ?? 100}
-            />
+            <LocationPicker latitude={location?.latitude} longitude={location?.longitude} radius={location?.radius} />
             <FormLabel className="checkbox-label">
               <input
                 name="geoRequired"

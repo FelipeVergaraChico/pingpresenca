@@ -19,6 +19,8 @@ Este conjunto descreve o produto acordado, seus critérios de aceitação e uma 
 
 ## Como interpretar
 
+Marco adicional autorizado: [D1 — demonstração pública compartilhada](demonstracao-publica.md), desenvolvido antes da implantação em `demopingpresenca.online`. E5 permanece no plano e a VPS/Nginx só serão alterados na etapa de implantação.
+
 Revisão adicional em 30/09/2026: [testes unitários, componentes e regressões](entregas/revisao-testes-unitarios.md), com lacunas cobertas, correção do cliente HTTP e distinção entre evidência unitária e integração real.
 
 Visualização adicional autorizada em 30/09/2026: [calendário opcional de aulas](entregas/calendario-aulas.md), com contagem mensal limitada no backend e detalhes paginados por dia.

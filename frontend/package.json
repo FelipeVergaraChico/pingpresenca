@@ -1,6 +1,6 @@
 {
   "name": "@ping-presenca/frontend",
-  "version": "0.4.0-e3",
+  "version": "0.4.1-demo",
   "private": true,
   "type": "module",
   "license": "AGPL-3.0-only",
@@ -11,12 +11,14 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "leaflet": "^1.9.4",
     "qrcode": "^1.5.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@types/leaflet": "^1.9.22",
     "@types/qrcode": "^1.5.6"
   }
 }

@@ -8,6 +8,7 @@ import { AppError } from '../platform/errors.js';
 import { adminOnly, checkVersion, isAdmin, managed, notFound, teachingOffering } from './access.js';
 import { plannedInstant, policySnapshot } from './domain.js';
 import { parseLessonList, listLessons } from './lesson-list.js';
+import { createGeocoder } from './geocoding.js';
 
 const uuid = z.uuid();
 const title = z.string().trim().min(2).max(160);
@@ -70,7 +71,14 @@ export function registerAcademic(
   app: FastifyInstance,
   pool: pg.Pool,
   token: (r: FastifyRequest) => string | undefined,
+  geocoding?: { geocodingUrl: string; publicOrigin: string },
 ) {
+  const search = createGeocoder(geocoding?.geocodingUrl ?? '', geocoding?.publicOrigin ?? '');
+  app.get('/api/locations/search', async r => {
+    await managed(pool, token(r), async (_c, p) => { adminOnly(p); });
+    const { q } = z.object({ q: z.string().trim().min(3).max(200) }).parse(r.query);
+    return search(q);
+  });
   app.get('/api/catalog', (r) =>
     managed(pool, token(r), async (c, p) => {
       if (!isAdmin(p) && !p.roles.includes('PROFESSOR'))

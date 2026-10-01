@@ -8,6 +8,7 @@ import { Invitation } from './Invitation';
 import { Recovery } from './Recovery';
 import { AttendancePage } from './attendance/AttendancePage';
 import { Projection } from './attendance/Projection';
+import { DemoBanner, DemoLanding } from './Demo';
 
 export function App() {
   const [route, setRoute] = useState(() => new URLSearchParams(location.hash.slice(1)));
@@ -148,6 +149,7 @@ function AccessApp({ lessonId, qr }: { lessonId?: string; qr?: string }) {
 
   if (account && installation && lessonId)
     return (
+      <><DemoBanner installation={installation} onLogout={signOut} />
       <AttendancePage
         key={`${account.id}-${lessonId}`}
         lessonId={lessonId}
@@ -155,16 +157,21 @@ function AccessApp({ lessonId, qr }: { lessonId?: string; qr?: string }) {
         account={account}
         timeZone={installation.timeZone}
       />
+      </>
     );
   if (account && installation)
     return (
+      <><DemoBanner installation={installation} onLogout={signOut} />
       <AcademicWorkspace
         key={account.id}
         account={account}
         installation={installation}
         onLogout={signOut}
       />
+      </>
     );
+  if (installation?.demo && !loading)
+    return <DemoLanding installation={installation} onEnter={setAccount} scanning={Boolean(lessonId)} />;
   return (
     <div className="app-shell">
       <a className="skip-link" href="#conteudo">
@@ -378,7 +385,7 @@ function AccessApp({ lessonId, qr }: { lessonId?: string; qr?: string }) {
         </main>
         <footer className="page-footer">
           <span>Software livre · AGPL-3.0-only</span>
-          <span>Ping Presença / 0.4.0-e3</span>
+          <span>Ping Presença / 0.4.1-demo</span>
         </footer>
       </div>
     </div>

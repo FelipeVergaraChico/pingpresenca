@@ -20,11 +20,18 @@ Cada marco integra interface, backend, persistência e validação das regras qu
 | E1 — Preparar uma aula | Administração cria acessos, local, disciplina, turma, matrícula e aula avulsa. | E0. |
 | E2 — Chamada ponta a ponta | Professor projeta, aluno confirma, professor resolve pendência/fecha e aluno consulta histórico. | E1. |
 | E3 — Integridade operacional | Reabertura, concorrência, indisponibilidade e limites temporais validados para experimentar em sala. | E2. |
+| D1 — Demonstração pública compartilhada | Acesso livre apenas a perfis fictícios, ambiente dedicado, limites e restauração controlada. Desenvolvimento antes da implantação em `demopingpresenca.online`. | E3; não conclui E4/E5/E6. |
 | E4 — Piloto observado | Experimento real em paralelo à chamada habitual, com resultados registrados. | E3 + disponibilidade de professor/turma. |
 | E5 — Gestão e exceções completas | Recorrência, importação, ciclo acadêmico, recuperação de acesso e exceções do MVP. | E3; pode evoluir enquanto se agenda E4. |
 | E6 — Distribuição pública | Instalação, migração/restauração, desempenho e documentação comprovados. | E5 + avaliações e correções pertinentes. |
 
 Os marcos não autorizam criar funcionalidades ainda não acordadas. O primeiro piloto depende de oportunidade externa; isso não impede avançar nas entregas locais.
+
+### Ajuste autorizado em 30/09/2026
+
+Priorizar D1 antes de retomar E5, sem remover requisitos desta última. A E4 continua sendo o piloto real, previsto para 10/12/2026, com formato/quantidade de participantes ainda a confirmar. Demonstração pública e piloto real devem usar bancos e instalações separados. A VPS existente (`ssh vps-pizzaria`, diretório `projects`, Nginx já instalado) será avaliada apenas na etapa de implantação; preservar os outros projetos. Domínio confirmado: **demopingpresenca.online**.
+
+Contrato e aceitação específicos: [demonstração pública](demonstracao-publica.md).
 
 ## E0 — Base executável e decisões mínimas
 

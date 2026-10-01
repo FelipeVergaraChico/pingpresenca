@@ -4,6 +4,7 @@ export interface Installation {
   serverTime: string;
   initialized: boolean;
   bootstrapAvailable: boolean;
+  demo?: { expiresAt: string; expired: boolean; remainingOperations: number };
 }
 export interface Account {
   id: string;

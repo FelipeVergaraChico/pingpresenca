@@ -14,6 +14,8 @@ const environment = z.object({
   INSTALLATION_TIME_ZONE: z.string().refine(isTimeZone, 'Fuso IANA inválido'),
   BOOTSTRAP_SECRET: z.string().max(512).optional(),
   SESSION_TTL_SECONDS: integer(28800, 60, 86400),
+  PUBLIC_DEMO: z.enum(['true', 'false']).default('false'),
+  GEOCODING_URL: z.union([z.literal(''), z.url().startsWith('https://')]).default(''),
   DATABASE_URL: z.url().optional(),
   POSTGRES_HOST: z.string().default('127.0.0.1'),
   POSTGRES_PORT: integer(54329, 1, 65535),
@@ -38,6 +40,8 @@ export function parseConfig(env: NodeJS.ProcessEnv) {
     throw new Error('HTTPS e cookie seguro são obrigatórios fora de loopback');
   }
   const bootstrapSecret = e.BOOTSTRAP_SECRET || undefined;
+  if (e.PUBLIC_DEMO === 'true' && bootstrapSecret)
+    throw new Error('PUBLIC_DEMO não aceita BOOTSTRAP_SECRET; use banco dedicado sem owner.');
   if (bootstrapSecret && (bootstrapSecret.length < 32 || bootstrapSecret.startsWith('SUBSTITUA_'))) {
     throw new Error('BOOTSTRAP_SECRET deve conter um segredo aleatório com pelo menos 32 caracteres');
   }
@@ -47,11 +51,18 @@ export function parseConfig(env: NodeJS.ProcessEnv) {
   if (!e.DATABASE_URL && (!e.POSTGRES_PASSWORD || e.POSTGRES_PASSWORD.startsWith('SUBSTITUA_'))) {
     throw new Error('Configure POSTGRES_PASSWORD ou DATABASE_URL');
   }
+  if (e.PUBLIC_DEMO === 'true') {
+    const databaseName = e.DATABASE_URL ? new URL(e.DATABASE_URL).pathname.slice(1) : e.POSTGRES_DB;
+    if (!databaseName.startsWith('pingpresenca_demo_'))
+      throw new Error('PUBLIC_DEMO exige banco dedicado com prefixo pingpresenca_demo_.');
+  }
   return {
     mode: e.NODE_ENV, host: e.API_HOST, port: e.API_PORT,
     publicOrigin: origin.origin, cookieSecure: e.COOKIE_SECURE === 'true',
     installationName: e.INSTALLATION_NAME, timeZone: e.INSTALLATION_TIME_ZONE,
     bootstrapSecret, sessionTtlSeconds: e.SESSION_TTL_SECONDS,
+    publicDemo: e.PUBLIC_DEMO === 'true',
+    geocodingUrl: e.GEOCODING_URL,
     database: e.DATABASE_URL ? { connectionString: e.DATABASE_URL } : {
       host: e.POSTGRES_HOST, port: e.POSTGRES_PORT, database: e.POSTGRES_DB,
       user: e.POSTGRES_USER, password: e.POSTGRES_PASSWORD,

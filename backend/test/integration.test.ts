@@ -47,8 +47,8 @@ test('E0 integration with real PostgreSQL', async (t) => {
   try {
     await t.test('migration runs concurrently and is repeatable', async () => {
       const results = await Promise.all([migrate(pool), migrate(secondPool)]);
-      assert.equal(results.flat().length, 4);
-      assert.equal((await pool.query('SELECT count(*) FROM schema_migrations')).rows[0].count, '4');
+      assert.equal(results.flat().length, 5);
+      assert.equal((await pool.query('SELECT count(*) FROM schema_migrations')).rows[0].count, '5');
       assert.deepEqual(await migrate(pool), []);
     });
     await reset();

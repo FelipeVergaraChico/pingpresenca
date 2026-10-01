@@ -132,6 +132,18 @@ test('E0–E3: preparation, attendance, reopening, cancellation and recovery thr
   ).toHaveCount(1);
   await page.unroute('**/api/catalog');
   await page.getByLabel('Nome do local').fill('Sala de demonstração');
+  // Map selection is frontend convenience; the same backend fields remain authoritative.
+  await page.route('https://tile.openstreetmap.org/**', route => route.abort());
+  await page.getByRole('button', { name: 'Selecionar no mapa', exact: true }).click();
+  await page.locator('.location-map').click({ position: { x: 140, y: 130 } });
+  await expect(page.getByLabel('Latitude do local')).not.toHaveValue('');
+  await expect(page.getByLabel('Longitude do local')).not.toHaveValue('');
+  await expect(page.locator('.location-pin')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Usar centro do mapa' })).toHaveCount(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('.location-map')).toBeVisible();
+  await page.locator('.location-picker').screenshot({ path: 'test-results/location-picker-mobile.png' });
+  await page.setViewportSize({ width: 1440, height: 1100 });
   await page.getByLabel('Latitude do local').fill('-23.55');
   await page.getByLabel('Longitude do local').fill('-46.63');
   await page.getByRole('button', { name: 'Criar local', exact: true }).click();

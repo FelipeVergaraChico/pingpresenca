@@ -376,6 +376,8 @@ frequência = presenças / (presenças + ausências incluídas) × 100
 
 ## 4. Fora do escopo funcional inicial
 
+Exceção autorizada em 30/09/2026: o [modo de demonstração pública D1](demonstracao-publica.md) permite acesso livre **apenas a perfis sintéticos pré-cadastrados em instalação descartável dedicada**. Não oferece cadastro livre de pessoas/instituições nem altera R01–R04 em instalações regulares. Sua restauração não define retenção de dados acadêmicos reais.
+
 - Várias instituições na mesma instalação.
 - Vários checkpoints por aula e frequência ponderada por tempo.
 - Contestação/revisão pelo aluno dentro do sistema.

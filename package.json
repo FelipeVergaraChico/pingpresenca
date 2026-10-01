@@ -1,6 +1,6 @@
 {
   "name": "ping-presenca",
-  "version": "0.4.0-e3",
+  "version": "0.4.1-demo",
   "private": true,
   "license": "AGPL-3.0-only",
   "engines": {
@@ -23,7 +23,10 @@
     "test:browser": "playwright test",
     "test:compose": "node scripts/compose-smoke.mjs",
     "test:pilot": "node scripts/integration.mjs e3",
-    "db:migrate": "npm run db:migrate -w backend"
+    "db:migrate": "npm run db:migrate -w backend",
+    "demo:prepare": "npm run demo:prepare -w backend --",
+    "test:demo:integration": "node scripts/integration.mjs demo",
+    "test:demo:browser": "DEMO_BROWSER=1 playwright test"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

@@ -80,7 +80,9 @@ export function registerAttendance(
   });
   app.get('/api/attendance/:id', (r) => inLesson(pool, token(r), id(r), attendanceView));
   app.get('/api/attendance/:id/projection', (r) =>
-    inLesson(pool, token(r), id(r), (ctx) => projection(ctx, config.publicOrigin)),
+    inLesson(pool, token(r), id(r), async (ctx) => ({
+      ...await projection(ctx, config.publicOrigin), publicDemo: config.publicDemo,
+    })),
   );
   app.post('/api/attendance/:id/open', (r) => {
     const input = z

@@ -8,6 +8,40 @@
   --line: #d7ddd3;
   --accent: #c6dc89;
 }
+.demo-banner {
+  padding: 16px clamp(18px, 4vw, 56px);
+  border-bottom: 1px solid #a9bd94;
+  background: #e7eedb;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.demo-banner p { margin: 6px 0 0; max-width: 95ch; font-size: .9rem; }
+.demo-banner button { flex-shrink: 0; }
+.demo-landing { max-width: 1160px; margin: auto; padding: 36px clamp(18px, 4vw, 56px) 0; }
+.demo-intro { max-width: 800px; padding: 16px 0 32px; }
+.demo-intro .brand { display: inline-block; margin-bottom: 32px; }
+.demo-intro h1 { font-size: clamp(2.6rem, 6vw, 4.6rem); line-height: 1.08; margin: 14px 0 24px; }
+.demo-intro h1 em { font-weight: normal; }
+.demo-intro p { line-height: 1.6; }
+.demo-landing .eyebrow { color: #365447; }
+.demo-profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.demo-profile { padding: clamp(20px, 3vw, 32px); border: 1px solid var(--line); border-top: 4px solid #78936f; border-radius: 16px; background: #fffefa; display: flex; flex-direction: column; }
+.demo-profile h3 { font-size: 1.6rem; margin: 14px 0 0; }
+.demo-profile p { line-height: 1.6; flex: 1; }
+.demo-students { display: flex; flex-wrap: wrap; gap: 10px; }
+.demo-profile button { min-height: 44px; }
+.demo-guide { margin: 36px 0; padding-top: 20px; border-top: 1px solid var(--line); line-height: 1.65; }
+.demo-guide li { padding: 5px 0; }
+.demo-guide summary { cursor: pointer; font-weight: 600; padding: 12px 0; }
+@media (max-width: 650px) {
+  .demo-profile-grid { grid-template-columns: 1fr; }
+  .demo-students { flex-direction: column; }
+  .demo-banner { align-items: flex-start; }
+}
 .projection .eyebrow,
 .attendance-page .eyebrow {
   color: #365447;
@@ -837,3 +871,13 @@ details[open] > form {
 .action-link:active { box-shadow: inset 0 1px 3px rgb(0 0 0 / 15%); }
 @media (prefers-reduced-motion: reduce) { .action-link { transition: none; } }
 @media(max-width:600px) { .attendance-page {padding:1rem;} .attendance-list li {align-items:stretch;flex-direction:column;} }
+
+.location-picker { min-width: 0; margin-block: 1rem; }
+.location-results { list-style: none; padding: 0; display: grid; gap: .5rem; }
+.location-results button { width: 100%; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+.location-map { height: 340px; width: 100%; border: 1px solid #96afa1; border-radius: 12px; margin-block: 1rem; isolation: isolate; z-index: 0; }
+.location-map:focus-visible { outline: 3px solid #48795d; outline-offset: 3px; }
+.location-pin { background: #245a48; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 0 2px #245a48, 0 2px 8px #0006; }
+.location-coordinates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.location-map .leaflet-control a { color: #183b31; }
+@media(max-width:600px) { .location-map { height: 280px; } .location-coordinates { grid-template-columns: 1fr; } }
