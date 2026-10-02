@@ -9,3 +9,11 @@ test-results/
 playwright-report/
 backups/
 .DS_Store
+
+# Configuração e operação específicas da VPS (mantidas apenas localmente)
+/deploy/vps/
+/scripts/vps-demo-*.sh
+/scripts/vps-demo-*.mjs
+/scripts/demo-expired.mjs
+/docs/implantacao-vps-demo.md
+/docs/demonstracao-publica.md
