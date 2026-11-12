@@ -738,7 +738,7 @@ test('E1 integration: preparation, invitations, scope and integrity in real Post
             .password_hash;
           const events = (await upgradePool.query('SELECT count(*) FROM audit_events')).rows[0]
             .count;
-          assert.deepEqual(await migrate(upgradePool), ['002_academic_preparation.sql','003_attendance.sql','004_pilot_integrity.sql','005_public_demo.sql']);
+          assert.deepEqual(await migrate(upgradePool), ['002_academic_preparation.sql','003_attendance.sql','004_pilot_integrity.sql','005_public_demo.sql','006_lesson_recurrence.sql']);
           assert.equal(
             (await upgradePool.query('SELECT password_hash FROM accounts')).rows[0].password_hash,
             before,
@@ -764,6 +764,48 @@ test('E1 integration: preparation, invitations, scope and integrity in real Post
         }
       },
     );
+    await t.test('E5.1/A25/A80/D04: prévia, geração atômica, reenvio e preservação das ocorrências', async () => {
+      const target = await okPost('/api/offerings', { disciplineId, name: 'Recorrência E5', term: '2027/1', shift: 'Noite', attendanceMode: 'PILOT' }, owner);
+      await okPost(`/api/offerings/${target.id}/teachers`, { teacherIds: [teacherId], version: 1 }, owner);
+      const url = `/api/offerings/${target.id}/recurrence`;
+      const body = { from: '2027-02-01', until: '2027-02-15', weekdays: [1], starts: '23:00', ends: '01:00', title: 'Série de teste', locationId, attendanceMode: 'PILOT' };
+      assert.equal((await post(`${url}/preview`, body, student)).statusCode, 404);
+      assert.equal((await post(`${url}/preview`, body)).statusCode, 401);
+      const preview = await okPost(`${url}/preview`, body, teacher);
+      assert.equal(preview.createCount, 3);
+      assert.equal((await pool.query('SELECT count(*) FROM lessons WHERE offering_id=$1', [target.id])).rows[0].count, '0');
+      const concurrent = await Promise.all([post(`${url}/generate`, { ...body, previewHash: preview.previewHash }, teacher), post(`${url}/generate`, { ...body, previewHash: preview.previewHash }, teacher, second)]);
+      assert.ok(concurrent.every(r => r.statusCode === 200), concurrent.map(r => r.body).join('\n'));
+      assert.equal(concurrent.filter(r => r.json().replayed).length, 1);
+      const lessons = (await pool.query('SELECT * FROM lessons WHERE offering_id=$1 ORDER BY starts_at', [target.id])).rows;
+      assert.equal(lessons.length, 3);
+      await pool.query("UPDATE lessons SET cancelled_at=clock_timestamp(),cancellation_reason='Cancelamento sintético' WHERE id=$1", [lessons[1].id]);
+      assert.equal((await pool.query('SELECT count(*) FROM attendance_sessions WHERE lesson_id=ANY($1::uuid[])', [lessons.map(l => l.id)])).rows[0].count, '0');
+      await pool.query("UPDATE lessons SET starts_at=starts_at+interval '1 day',ends_at=ends_at+interval '1 day',title='Edição individual',version=version+1 WHERE id=$1", [lessons[0].id]);
+      const expanded = { ...body, until: '2027-02-22', title: 'Novo título' };
+      const again = await okPost(`${url}/preview`, expanded, teacher);
+      assert.equal(again.createCount, 1);
+      const generated = await okPost(`${url}/generate`, { ...expanded, previewHash: again.previewHash }, teacher);
+      assert.equal(generated.created, 1);
+      assert.equal((await pool.query('SELECT title FROM lessons WHERE id=$1', [lessons[0].id])).rows[0].title, 'Edição individual');
+      const next = { ...body, from: '2027-03-01', until: '2027-03-01' };
+      const stale = await okPost(`${url}/preview`, next, owner);
+      await pool.query('UPDATE locations SET version=version+1 WHERE id=$1', [locationId]);
+      assert.equal((await post(`${url}/generate`, { ...next, previewHash: stale.previewHash }, owner)).statusCode, 409);
+      assert.equal((await pool.query('SELECT count(*) FROM lessons WHERE offering_id=$1', [target.id])).rows[0].count, '4');
+      const fresh = await okPost(`${url}/preview`, next, owner);
+      await pool.query(`CREATE FUNCTION test_fail_recurrence() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic failure'; END; $$;
+        CREATE TRIGGER test_fail_recurrence BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION test_fail_recurrence()`);
+      try {
+        assert.equal((await post(`${url}/generate`, { ...next, previewHash: fresh.previewHash }, owner)).statusCode, 500);
+        assert.equal((await pool.query('SELECT count(*) FROM lessons WHERE offering_id=$1', [target.id])).rows[0].count, '4');
+        assert.equal((await pool.query('SELECT count(*) FROM lesson_generations WHERE offering_id=$1', [target.id])).rows[0].count, '2');
+      } finally { await pool.query('DROP TRIGGER test_fail_recurrence ON audit_events; DROP FUNCTION test_fail_recurrence()'); }
+      await pool.query('UPDATE offerings SET active=false WHERE id=$1', [target.id]);
+      assert.equal((await post(`${url}/preview`, next, teacher)).statusCode, 409);
+      assert.equal((await pool.query("SELECT count(*) FROM audit_events WHERE action='LESSONS_GENERATED' AND details->>'offeringId'=$1", [target.id])).rows[0].count, '2');
+    });
+
   } finally {
     await app.close();
     await second.close();

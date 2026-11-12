@@ -873,6 +873,10 @@ details[open] > form {
 @media(max-width:600px) { .attendance-page {padding:1rem;} .attendance-list li {align-items:stretch;flex-direction:column;} }
 
 .location-picker { min-width: 0; margin-block: 1rem; }
+.recurrence-editor { margin-block: 1rem; }
+.recurrence-weekdays { display: flex; flex-wrap: wrap; gap: .5rem 1rem; }
+.recurrence-editor nav { margin-block: 1rem; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.recurrence-editor li { padding-block: .5rem; overflow-wrap: anywhere; }
 .location-results { list-style: none; padding: 0; display: grid; gap: .5rem; }
 .location-results button { width: 100%; text-align: left; white-space: normal; overflow-wrap: anywhere; }
 .location-map { height: 340px; width: 100%; border: 1px solid #96afa1; border-radius: 12px; margin-block: 1rem; isolation: isolate; z-index: 0; }

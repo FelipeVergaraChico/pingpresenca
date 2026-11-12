@@ -465,7 +465,25 @@ test('E0–E3: preparation, attendance, reopening, cancellation and recovery thr
     await lessonsPanel.getByRole('button', { name: 'Lista', exact: true }).click();
     await expect(lessonsPanel.getByLabel('Modo', { exact: true })).toHaveValue('OFFICIAL');
     await expect(lessonsPanel.locator('.lesson-row')).toHaveCount(10);
+    // E5.1: preview and confirm a recurrence without opening attendance.
+    await teacher.getByText('Programar aulas recorrentes', { exact: true }).click();
+    const recurrence = teacher.locator('.recurrence-editor');
+    await recurrence.getByLabel('Título das aulas').fill('Recorrência demonstrável');
+    await recurrence.getByLabel('Primeiro dia do período').fill('2098-02-01');
+    await recurrence.getByLabel('Último dia do período').fill('2098-02-15');
+    await recurrence.getByLabel('Segunda', { exact: true }).check();
+    await recurrence.getByLabel('Horário de início').fill('23:00');
+    await recurrence.getByLabel('Horário de término').fill('01:00');
+    await recurrence.getByLabel('Local das aulas').selectOption({ label: 'Sala de demonstração' });
+    await recurrence.getByRole('button', { name: 'Visualizar prévia' }).click();
+    await expect(recurrence.getByRole('button', { name: 'Confirmar geração das aulas' })).toBeEnabled();
+    expect((await new AxeBuilder({ page: teacher }).analyze()).violations).toEqual([]);
+    expect(await teacher.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await recurrence.screenshot({ path: 'test-results/recurrence-mobile.png' });
+    await recurrence.getByRole('button', { name: 'Confirmar geração das aulas' }).click();
+    await expect(recurrence.getByRole('status')).toContainText('Lote concluído');
     await projection.close();
+
   } finally {
     await teacherContext.close();
     await studentContext.close();
