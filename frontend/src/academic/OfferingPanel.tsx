@@ -2,6 +2,7 @@ import { FormLabel, ValidationGroup } from '../FormValidation';
 import { History } from '../attendance/History';
 import { LessonList } from './LessonList';
 import { LessonTabs } from './ListControls';
+import { RecurrencePanel } from './RecurrencePanel';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import { useUiStore } from '../ui-store';
@@ -23,8 +24,10 @@ export function OfferingPanel({
   catalog,
   timeZone,
   refresh,
+  publicDemo = false,
 }: {
   admin: boolean;
+  publicDemo?: boolean;
   offerings: Offering[];
   accounts: ManagedAccount[];
   catalog: Catalog;
@@ -314,6 +317,7 @@ export function OfferingPanel({
             </div>
           )}
           <h3>Aulas da turma</h3>
+          {offering.can_manage && offering.active && !publicDemo && <RecurrencePanel key={offering.id} offeringId={offering.id} mode={offering.attendance_mode} catalog={catalog} refresh={load} />}
           <LessonTabs value={tab} onChange={(next) => { setTab(next); setPreview(null); previewRequest.current++; }} tabs={[
             { value: 'upcoming', label: 'Próximas aulas' },
             ...(offering.can_manage ? [{ value: 'past', label: 'Histórico de aulas' }] : []),

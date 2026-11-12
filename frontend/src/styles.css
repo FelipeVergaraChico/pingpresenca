@@ -873,6 +873,10 @@ details[open] > form {
 @media(max-width:600px) { .attendance-page {padding:1rem;} .attendance-list li {align-items:stretch;flex-direction:column;} }
 
 .location-picker { min-width: 0; margin-block: 1rem; }
+.recurrence-editor { margin-block: 1rem; }
+.recurrence-weekdays { display: flex; flex-wrap: wrap; gap: .5rem 1rem; }
+.recurrence-editor nav { margin-block: 1rem; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.recurrence-editor li { padding-block: .5rem; overflow-wrap: anywhere; }
 .location-results { list-style: none; padding: 0; display: grid; gap: .5rem; }
 .location-results button { width: 100%; text-align: left; white-space: normal; overflow-wrap: anywhere; }
 .location-map { height: 340px; width: 100%; border: 1px solid #96afa1; border-radius: 12px; margin-block: 1rem; isolation: isolate; z-index: 0; }
@@ -881,3 +885,15 @@ details[open] > form {
 .location-coordinates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
 .location-map .leaflet-control a { color: #183b31; }
 @media(max-width:600px) { .location-map { height: 280px; } .location-coordinates { grid-template-columns: 1fr; } }
+.import-invitations { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid currentColor; }
+.import-invitations li { margin-block: 1rem; overflow-wrap: anywhere; }
+.import-editor summary { min-height: 44px; cursor: pointer; font-weight: 600; }
+.import-file-picker { padding: 1rem; margin: 1rem 0; border: 1px solid #c5d3c6; border-radius: 12px; background: #eef2e8; min-width: 0; }
+.import-file-picker input { width: 100%; min-width: 0; max-width: 100%; }
+.import-file-picker input::file-selector-button { padding: .7rem; margin-right: .6rem; border: 1px solid #9eb89e; border-radius: 8px; background: #fffdf7; color: #193e35; cursor: pointer; }
+.import-file-picker a { display: inline-flex; align-items: center; min-height: 44px; color: #193e35; font-weight: 600; text-underline-offset: .2em; }
+.import-editor textarea { width: 100%; box-sizing: border-box; font-family: monospace; }
+.import-editor .primary { width: 100%; justify-content: center; }
+.import-editor li { overflow-wrap: anywhere; }
+.import-invitations .checkbox-label { margin-block: 1rem; align-items: flex-start; }
+.import-invitations input[type='checkbox'] { flex-shrink: 0; }

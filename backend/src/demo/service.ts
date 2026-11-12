@@ -90,7 +90,7 @@ export async function prepareDemo(pool: pg.Pool, config: Config, replace = false
     const existing = Boolean((await c.query('SELECT 1 FROM demo_state')).rowCount);
     if (existing && !replace) throw blocked('Demonstração já preparada. Restauração exige --replace-demo-data.');
     // Explicit inventory, no CASCADE and no arbitrary table/database names.
-    const tables = `attendance_attempts,attendance_authorizations,attendance_code_limits,
+    const tables = `generated_occurrences,lesson_generations,attendance_attempts,attendance_authorizations,attendance_code_limits,
       attendance_records,attendance_openings,attendance_sessions,password_recoveries,invitations,
       auth_sessions,audit_events,enrollments,offering_teachers,lessons,offerings,locations,
       disciplines,account_roles,account_profiles,accounts`;

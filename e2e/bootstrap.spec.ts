@@ -465,7 +465,44 @@ test('E0–E3: preparation, attendance, reopening, cancellation and recovery thr
     await lessonsPanel.getByRole('button', { name: 'Lista', exact: true }).click();
     await expect(lessonsPanel.getByLabel('Modo', { exact: true })).toHaveValue('OFFICIAL');
     await expect(lessonsPanel.locator('.lesson-row')).toHaveCount(10);
+    // E5.1: preview and confirm a recurrence without opening attendance.
+    await teacher.getByText('Programar aulas recorrentes', { exact: true }).click();
+    const recurrence = teacher.locator('.recurrence-editor');
+    await recurrence.getByLabel('Título das aulas').fill('Recorrência demonstrável');
+    await recurrence.getByLabel('Primeiro dia do período').fill('2098-02-01');
+    await recurrence.getByLabel('Último dia do período').fill('2098-02-15');
+    await recurrence.getByLabel('Segunda', { exact: true }).check();
+    await recurrence.getByLabel('Horário de início').fill('23:00');
+    await recurrence.getByLabel('Horário de término').fill('01:00');
+    await recurrence.getByLabel('Local das aulas').selectOption({ label: 'Sala de demonstração' });
+    await recurrence.getByRole('button', { name: 'Visualizar prévia' }).click();
+    await expect(recurrence.getByRole('button', { name: 'Confirmar geração das aulas' })).toBeEnabled();
+    expect((await new AxeBuilder({ page: teacher }).analyze()).violations).toEqual([]);
+    expect(await teacher.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await recurrence.screenshot({ path: 'test-results/recurrence-mobile.png' });
+    await recurrence.getByRole('button', { name: 'Confirmar geração das aulas' }).click();
+    await expect(recurrence.getByRole('status')).toContainText('Lote concluído');
     await projection.close();
+    // E5.2: isolated future enrollment does not change the attendance scenarios above.
+    await page.getByRole('button', { name: 'Contas e convites', exact: true }).click();
+    await page.getByText('Importar contas por CSV', { exact: true }).click();
+    await page.getByLabel('Dados CSV', { exact: true }).fill('nome,email,identificador,papel\nPessoa Importada,import-browser@example.com,,ALUNO');
+    const importOfferings = await (await page.request.get('/api/offerings')).json();
+    await page.getByLabel('Turma do lote (opcional)').selectOption(importOfferings[0].id);
+    await page.getByLabel('Início das matrículas', { exact: true }).fill('2099-01-01T00:00');
+    await page.getByRole('button', { name: 'Visualizar prévia da importação' }).click();
+    await expect(page.getByRole('button', { name: 'Confirmar criação das contas' })).toBeEnabled();
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    await page.screenshot({ path: 'test-results/import-mobile.png', fullPage: true });
+    await page.getByRole('button', { name: 'Confirmar criação das contas' }).click();
+    await page.getByRole('button', { name: 'Gerar convites do lote' }).click();
+    const importLink = page.getByLabel('Pessoa Importada · import-browser@example.com', { exact: true });
+    await expect(importLink).toHaveValue(/#invite=/);
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: 'test-results/import-invitations-mobile.png', fullPage: true });
   } finally {
     await teacherContext.close();
     await studentContext.close();

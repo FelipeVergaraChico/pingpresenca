@@ -160,6 +160,14 @@ Corrigir problemas relevantes observados antes de recomendar uso oficial. A entr
 
 ## E5 — Completar a gestão e as exceções do MVP
 
+**Atualização em 12/11/2026:** mantenedor confirmou programação de aulas e importação de contas funcionando. A importação agora aceita seleção de CSV e colagem de planilhas, com modelo para download, mantendo prévia e confirmação. E5.1/E5.2 com aceite dos fluxos informados; E5 como um todo continua em andamento. Leitor de tela e demais validações não relatadas continuam pendentes. Próximo recorte permanece SMTP opcional/verificação por canal.
+
+**Atualização em 21/10/2026:** E5.2 ampliada com vínculo opcional do lote a uma turma, matrícula temporal, atribuição de professores e emissão/substituição explícita de convites manuais em lote. Validação PostgreSQL retomada com Docker; corrigidas consulta incorreta de versão da política e preparação de papel administrativo no teste anterior. Consulte [ADR 0006](adr/0006-importacao-administrativa.md) e [evidências E5.2](entregas/e5-2.md). Aceite manual ainda pendente. Próximo recorte: SMTP opcional e distinção de verificação por canal; depois ciclo de contas/turmas, consolidação manual, exceções de frequência e revisão final da E5. Não iniciar E6 nem implantar automaticamente na VPS.
+
+**Atualização em 15/10/2026:** mantenedor ainda não testou manualmente E5.1. Iniciado E5.2a — importação de novas contas com prévia e confirmação; vínculos e convites continuam pelas operações individuais existentes. Consulte [escopo, testes e pendências E5.2](entregas/e5-2.md). Integração PostgreSQL deste novo recorte pendente por Docker indisponível; não declarar E5 concluída. Ideia de [auditoria verificável](evolucoes-futuras.md) registrada fora do MVP, sem implementar blockchain.
+
+**Iniciada em 02/10/2026:** primeiro recorte E5.1 — geração recorrente com prévia, confirmação, idempotência e preservação de ocorrências. Decisões na [ADR 0005](adr/0005-geracao-recorrente.md); resultados em [E5.1](entregas/e5-1.md). Não representa conclusão da E5. Próximo recorte proposto: importação administrativa de usuários, com prévia e idempotência; SMTP e demais exceções seguem pendentes. Demo validada pelo mantenedor; nenhuma implantação da E5 na VPS foi autorizada neste recorte.
+
 ### Entregar
 
 - Geração antecipada por recorrência, edição individual e aulas avulsas; importação administrativa de usuários com convites e vínculos.

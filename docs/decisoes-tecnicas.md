@@ -141,6 +141,8 @@ Estas questões não impedem a consolidação do plano. Devem ser resolvidas **a
 
 ## 10. Registro de decisão por implementação
 
+E5.1: [ADR 0005 — geração recorrente](adr/0005-geracao-recorrente.md) resolve D04 para aulas e complementa D07 para conversão de recorrência no fuso. E5.2: [ADR 0006 — importação administrativa](adr/0006-importacao-administrativa.md) resolve D04 para criação de contas com vínculos e emissão explícita de convites, sem atualização automática de contas existentes.
+
 ### Seleção de local no mapa — 01/10/2026
 
 - Cadastro administrativo usa Leaflet 1.9.4 com tiles OpenStreetMap, carregados por ação explícita. Ao abrir, solicita localização do navegador para aproximar a área (HTTPS/localhost e permissão necessários); não preenche nem salva coordenadas automaticamente. Se o usuário já navegar/selecionar, uma resposta tardia não reposiciona o mapa. Negação/timeout deixa mapa, busca e campos disponíveis. Clique seleciona o ponto; campos numéricos continuam sincronizados e disponíveis sem rede. Círculo representa o raio, não uma garantia de precisão do GPS. Botão de seleção do centro removido; teclado pode utilizar resultados de busca ou coordenadas.
@@ -154,3 +156,6 @@ Estas questões não impedem a consolidação do plano. Devem ser resolvidas **a
 - Validação em 01/10/2026: build e typecheck aprovados; Chrome isolado a 390×844 carregou quatro tiles reais, selecionou coordenadas e apresentou zero overflow horizontal. O teste integrado não iniciou porque o socket do Docker Desktop estava indisponível; não registrar esse cenário como aprovado nesta revisão.
 
 Para cada escolha relevante, registrar: problema concreto, requisito atendido, solução escolhida, alternativas consideradas, consequência operacional e teste que a valida. Evitar transformar preferências provisórias deste documento em compromissos irreversíveis sem evidência.
+# Decisões adicionais — 15/10/2026
+
+Importação inicial E5.2a: CSV limitado, prévia revalidada, criação atômica de novas contas, hierarquia preservada e reenvio idempotente usando evento de lote na auditoria. [Detalhes e limites](entregas/e5-2.md). Vínculos/convites em lote e SMTP permanecem pendentes, não excluídos. A [auditoria verificável](evolucoes-futuras.md) é uma proposta futura, não parte implementada do MVP.

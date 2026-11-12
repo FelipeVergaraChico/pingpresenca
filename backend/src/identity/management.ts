@@ -1,4 +1,5 @@
-import { randomBytes, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
+import { issueManualInvitation } from './invitations.js';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type pg from 'pg';
 import { z } from 'zod';
@@ -292,31 +293,7 @@ export function registerIdentityManagement(
           'NOT_INVITABLE',
           'Convites são apenas para contas ainda não ativadas. Não substituem recuperação de senha.',
         );
-      await c.query(
-        'UPDATE invitations SET revoked_at=clock_timestamp() WHERE account_id=$1 AND consumed_at IS NULL AND revoked_at IS NULL',
-        [accountId],
-      );
-      const secret = randomBytes(32).toString('base64url');
-      const invitationId = randomUUID();
-      const {
-        rows: [invitation],
-      } = await c.query(
-        `INSERT INTO invitations(id,account_id,token_hash,channel,created_by,expires_at)
-        VALUES ($1,$2,$3,'MANUAL',$4,clock_timestamp()+interval '48 hours') RETURNING expires_at`,
-        [invitationId, accountId, digest(secret), p.id],
-      );
-      await audit(c, {
-        actorId: p.id,
-        actorRole: p.roles.includes('OWNER') ? 'OWNER' : 'ADMIN',
-        action: 'INVITATION_ISSUED',
-        targetId: accountId,
-        details: { invitationId, channel: 'MANUAL', expiresAt: invitation.expires_at },
-      });
-      return {
-        url: `${config.publicOrigin}/#invite=${secret}`,
-        expiresAt: invitation.expires_at,
-        channel: 'MANUAL',
-      };
+      return issueManualInvitation(c, p, accountId, config.publicOrigin);
     });
   });
   app.post(

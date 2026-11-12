@@ -57,7 +57,8 @@ test('D1: demonstração em PostgreSQL descartável', async t => {
       assert.equal((await post('/api/demo/login', { profile: 'professor', roles: ['OWNER'] })).statusCode, 400);
       const professor = await login('professor');
       for (const route of ['/api/bootstrap', '/api/auth/login', '/api/admin/accounts', '/api/recovery/complete',
-        '/api/offerings', '/api/attendance/settings'])
+        '/api/offerings', '/api/attendance/settings', '/api/admin/accounts/import/preview',
+        '/api/admin/accounts/import/confirm', '/api/admin/accounts/import/00000000-0000-4000-8000-000000000001/invitations'])
         assert.equal((await post(route, {}, professor)).statusCode, 403, route);
       assert.equal((await post('/api/lessons', { attendanceMode: 'OFFICIAL' }, professor)).statusCode, 400);
       const installation = (await get('/api/installation')).json();
@@ -127,7 +128,7 @@ test('D1: demonstração em PostgreSQL descartável', async t => {
       assert.equal((await pool.query('SELECT 1 FROM attendance_records')).rowCount, 0);
       assert.equal((await pool.query('SELECT 1 FROM auth_sessions')).rowCount, 0);
       assert.equal((await pool.query('SELECT 1 FROM audit_events')).rowCount, 1);
-      assert.equal((await pool.query('SELECT 1 FROM schema_migrations')).rowCount, 5);
+      assert.equal((await pool.query('SELECT 1 FROM schema_migrations')).rowCount, 6);
       app = await buildApp(config, pool);
       assert.equal((await get('/api/auth/me', oldStudent)).statusCode, 401);
     });

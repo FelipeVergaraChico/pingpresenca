@@ -2,17 +2,22 @@ import { FormLabel, ValidationGroup } from '../FormValidation';
 import { useState } from 'react';
 import { api, type Account } from '../api';
 import { ActionForm, Field, value } from './Form';
-import type { ManagedAccount } from './types';
+import type { ManagedAccount, Offering } from './types';
 import { RecoveryIssuer } from '../Recovery';
+import { AccountImportPanel } from './AccountImportPanel';
 
 export function AccountPanel({
   actor,
   accounts,
   refresh,
+  offerings = [],
+  timeZone,
 }: {
   actor: Account;
   accounts: ManagedAccount[];
   refresh: () => Promise<void>;
+  offerings?: Offering[];
+  timeZone?: string;
 }) {
   const [selected, setSelected] = useState(''),
     [link, setLink] = useState('');
@@ -38,6 +43,7 @@ export function AccountPanel({
   return (
     <section>
       <h2>Contas e convites</h2>
+      <AccountImportPanel refresh={refresh} offerings={offerings} timeZone={timeZone} />
       <p className="muted">
         Cadastre, atribua os vínculos na turma e só então entregue o convite. Nenhum e-mail é
         enviado nesta entrega.
