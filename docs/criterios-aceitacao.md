@@ -38,6 +38,7 @@ Referência: [especificação do MVP](especificacao-mvp.md). Os cenários são o
 | A23 | R07, R18 | Aula no intervalo entre duas matrículas não gera falta para o aluno. Histórico reúne os dois períodos sem duplicar a aula nem misturar piloto com oficial. |
 | A24 | R07 | Alterar vigência ou inserir matrícula retroativa que mude participação em aula já aberta é recusado. Ajuste que não afete essas ocorrências respeita as demais regras normais. |
 | A25 | R08, R24 | Horário recorrente gera ocorrências no período letivo e no fuso configurado. Cada aula pode ser alterada individualmente; gerar a série não abre chamadas. Aula avulsa independe da recorrência. |
+| A25.1 | R08, R24 | Prévia não cria aulas. Confirmação concorrente/reenvio não duplica; ocorrências editadas/canceladas e horários já ocupados são preservados. Prévia desatualizada exige revisão; falha de auditoria reverte o lote. |
 | A26 | R08 | Aula futura sem histórico pode ser excluída. Aula com chamada/registros não é apagada pelo mesmo fluxo. |
 | A27 | R08 | Após primeira abertura, tentar mudar turma, data, início ou fim falha no backend. Título/descrição sem efeito sobre presença continuam editáveis. |
 | A28 | R08, R09 | Troca de local antes da abertura aceita somente local autorizado. Após abertura, exige fechamento, motivo e auditoria; nova abertura guarda novas regras e preserva o snapshot anterior. |
@@ -174,3 +175,8 @@ O marco adicional D1 tem os cenários [DEMO-01 a DEMO-07](demonstracao-publica.m
 Cada entrega deve apontar quais cenários comprovou, com versão do código e tipo de evidência: teste automatizado, verificação manual, relatório de carga ou ensaio operacional. Cenários adiados continuam pendentes; não devem ser marcados como aprovados por estarem descritos aqui.
 
 Interações ainda não fechadas na entrevista estão em [decisões técnicas](decisoes-tecnicas.md), e precisam ser resolvidas antes de testar a funcionalidade afetada.
+## Evidência adicional E5.2a — 15/10/2026
+
+Importação de novas contas: testes de parser e interface aprovados; integração de permissões, idempotência e rollback adicionada mas ainda não executada por indisponibilidade do Docker. A05/A06/A07/A09 continuam com cobertura parcial, não encerrada pela mera existência de código. Consulte [resultados e pendências](entregas/e5-2.md).
+
+Atualização de 21/10/2026: integração PostgreSQL executada e aprovada após correção da coluna de versão da política e da preparação de papel no teste. E5.2b inclui vínculos temporais e convites manuais em lote: A05–A09 no canal manual, A19/A20, A54 e A76 exercitados nos cenários de `e1.integration.test.ts`. SMTP e validação humana continuam pendentes. Resultados completos e limites no relatório E5.2.
