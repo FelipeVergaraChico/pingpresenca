@@ -123,7 +123,7 @@ export function AcademicWorkspace({
           {loading ? (
             <p role="status">Carregando sua área…</p>
           ) : tab === 'accounts' ? (
-            <AccountPanel actor={account} accounts={accounts} refresh={refresh} />
+            <AccountPanel actor={account} accounts={accounts} refresh={refresh} offerings={offerings} timeZone={installation.timeZone} />
           ) : tab === 'catalog' ? (
             <CatalogPanel catalog={catalog} refresh={refresh} />
           ) : tab === 'settings' ? (
@@ -133,6 +133,7 @@ export function AcademicWorkspace({
             </>
           ) : (
             <OfferingPanel
+              publicDemo={!!installation.demo}
               admin={admin}
               offerings={offerings}
               accounts={accounts}

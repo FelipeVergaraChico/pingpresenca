@@ -805,7 +805,91 @@ test('E1 integration: preparation, invitations, scope and integrity in real Post
       assert.equal((await post(`${url}/preview`, next, teacher)).statusCode, 409);
       assert.equal((await pool.query("SELECT count(*) FROM audit_events WHERE action='LESSONS_GENERATED' AND details->>'offeringId'=$1", [target.id])).rows[0].count, '2');
     });
-
+    await t.test('R03/A05/A06: import preview, atomic commit, hierarchy and concurrent replay', async () => {
+      const currentAdmin = (await get('/api/admin/accounts', owner)).json().find((a: { id: string }) => a.id === adminId);
+      await okPost(`/api/admin/accounts/${adminId}/roles`, { roles: ['ADMIN', 'PROFESSOR'], version: currentAdmin.version, reason: 'Preparação do cenário de importação' }, owner);
+      await pool.query('UPDATE installation SET institutional_id_required=false');
+      const csv = 'nome,email,identificador,papel\nImport Ana,import-ana@example.com,,ALUNO\nImport Prof,import-prof@example.com,,PROFESSOR';
+      const base = '/api/admin/accounts/import';
+      assert.equal((await post(`${base}/preview`, { csv }, teacher)).statusCode, 403);
+      const count = (await pool.query('SELECT count(*) FROM accounts')).rows[0].count;
+      const preview = await okPost(`${base}/preview`, { csv }, admin);
+      assert.equal(preview.valid, true);
+      assert.equal((await pool.query('SELECT count(*) FROM accounts')).rows[0].count, count);
+      const invalid = await okPost(`${base}/preview`, { csv: csv.replace('ALUNO', 'ADMIN') }, owner);
+      assert.equal(invalid.valid, false);
+      const payload = { csv, previewHash: preview.previewHash, requestId: randomUUID() };
+      const results = await Promise.all([post(`${base}/confirm`, payload, admin), post(`${base}/confirm`, payload, admin, second)]);
+      for (const r of results) assert.equal(r.statusCode, 200, r.body);
+      assert.equal(results.filter(r => r.json().replayed).length, 1);
+      assert.equal((await pool.query('SELECT count(*) FROM accounts')).rows[0].count, String(Number(count) + 2));
+      assert.equal((await okPost(`${base}/preview`, { csv }, admin)).valid, false);
+      const profiles = await pool.query("SELECT a.password_hash, p.email_verified_at FROM accounts a JOIN account_profiles p ON p.account_id=a.id WHERE p.email LIKE 'import-%@example.com'");
+      assert.ok(profiles.rows.every(r => r.password_hash === null && r.email_verified_at === null));
+      const nextCsv = csv.replaceAll('import-', 'second-import-');
+      const stale = await okPost(`${base}/preview`, { csv: nextCsv }, owner);
+      await pool.query('UPDATE installation SET settings_version=settings_version+1');
+      assert.equal((await post(`${base}/confirm`, { csv: nextCsv, previewHash: stale.previewHash, requestId: randomUUID() }, owner)).statusCode, 409);
+      const fresh = await okPost(`${base}/preview`, { csv: nextCsv }, owner);
+      await pool.query(`CREATE FUNCTION test_fail_import() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'synthetic failure'; END; $$;
+        CREATE TRIGGER test_fail_import BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION test_fail_import()`);
+      try {
+        assert.equal((await post(`${base}/confirm`, { csv: nextCsv, previewHash: fresh.previewHash, requestId: randomUUID() }, owner)).statusCode, 500);
+        assert.equal((await pool.query("SELECT count(*) FROM account_profiles WHERE email LIKE 'second-import-%'")).rows[0].count, '0');
+      } finally { await pool.query('DROP TRIGGER test_fail_import ON audit_events; DROP FUNCTION test_fail_import()'); }
+    });
+    await t.test('E5.2b/A07/A08/A19: batch links, temporal guard, invitation replacement and hierarchy', async () => {
+      const base = '/api/admin/accounts/import';
+      const target = await okPost('/api/offerings', { disciplineId, name: 'Importação de turma', term: '2098/1', shift: 'Noite', attendanceMode: 'PILOT' }, owner);
+      const csv = 'nome,email,identificador,papel\nLote Aluno,lote-aluno@example.com,,ALUNO\nLote Professor,lote-prof@example.com,,PROFESSOR';
+      const body = { csv, offeringId: target.id, enrolledLocal: '2098-01-01T00:00', endedLocal: '2098-07-01T00:00' };
+      assert.equal((await post(`${base}/preview`, { ...body, endedLocal: '2097-01-01T00:00' }, owner)).statusCode, 400);
+      const preview = await okPost(`${base}/preview`, body, admin);
+      assert.equal(preview.target.name, 'Importação de turma');
+      const requestId = randomUUID();
+      const result = await okPost(`${base}/confirm`, { ...body, previewHash: preview.previewHash, requestId }, admin);
+      assert.equal(result.batchId, requestId);
+      const members = (await get(`/api/offerings/${target.id}/members`, owner)).json();
+      assert.equal(members.teachers.length, 1); assert.equal(members.enrollments.length, 1);
+      assert.equal(members.enrollments[0].enrolled_at, '2098-01-01T03:00:00.000Z');
+      const invitesUrl = `${base}/${result.batchId}/invitations`;
+      assert.equal((await post(invitesUrl, { requestId: randomUUID(), replaceExisting: false }, teacher)).statusCode, 403);
+      const issueId = randomUUID();
+      const issued = await okPost(invitesUrl, { requestId: issueId, replaceExisting: false }, admin);
+      assert.equal(issued.links.length, 2);
+      assert.equal((await post(invitesUrl, { requestId: issueId, replaceExisting: true }, admin)).statusCode, 409);
+      assert.equal((await post(invitesUrl, { requestId: randomUUID(), replaceExisting: false }, admin)).statusCode, 409);
+      const replaced = await okPost(invitesUrl, { requestId: randomUUID(), replaceExisting: true }, admin);
+      const secret = (url: string) => new URL(url).hash.slice('#invite='.length);
+      for (const link of issued.links) assert.equal((await post('/api/invitations/inspect', { token: secret(link.url) })).statusCode, 410);
+      await pool.query(`CREATE FUNCTION test_fail_invites() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+        IF NEW.action='IMPORT_INVITATIONS_ISSUED' THEN RAISE EXCEPTION 'synthetic failure'; END IF; RETURN NEW; END; $$;
+        CREATE TRIGGER test_fail_invites BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION test_fail_invites()`);
+      try {
+        assert.equal((await post(invitesUrl, { requestId: randomUUID(), replaceExisting: true }, admin)).statusCode, 500);
+        for (const link of replaced.links) assert.equal((await post('/api/invitations/inspect', { token: secret(link.url) })).statusCode, 200);
+      } finally { await pool.query('DROP TRIGGER test_fail_invites ON audit_events; DROP FUNCTION test_fail_invites()'); }
+      const studentLink = replaced.links.find((l: { email: string }) => l.email === 'lote-aluno@example.com');
+      await okPost('/api/invitations/accept', { token: secret(studentLink.url), password }, '');
+      assert.equal((await pool.query('SELECT email_verified_at FROM account_profiles WHERE account_id=$1', [studentLink.accountId])).rows[0].email_verified_at, null);
+      const afterAccept = await okPost(invitesUrl, { requestId: randomUUID(), replaceExisting: true }, admin);
+      assert.equal(afterAccept.skipped, 1); assert.equal(afterAccept.links.length, 1);
+      const importedTeacher = afterAccept.links[0].accountId;
+      const account = (await get('/api/admin/accounts', owner)).json().find((a: { id: string }) => a.id === importedTeacher);
+      await okPost(`/api/admin/accounts/${importedTeacher}/roles`, { roles: ['PROFESSOR', 'ADMIN'], version: account.version, reason: 'Teste de hierarquia após importação' }, owner);
+      assert.equal((await post(invitesUrl, { requestId: randomUUID(), replaceExisting: true }, admin)).statusCode, 409);
+      const changed = { ...body, csv: csv.replaceAll('lote-', 'other-lote-') };
+      const beforeArchive = await okPost(`${base}/preview`, changed, owner);
+      await pool.query('UPDATE offerings SET active=false WHERE id=$1', [target.id]);
+      assert.equal((await post(`${base}/confirm`, { ...changed, previewHash: beforeArchive.previewHash, requestId: randomUUID() }, owner)).statusCode, 409);
+      await pool.query('UPDATE offerings SET active=true WHERE id=$1', [target.id]);
+      await pool.query(`INSERT INTO lessons(id,offering_id,location_id,title,starts_at,ends_at,attendance_mode,context_locked_at)
+        VALUES($1,$2,$3,'Contexto fixado','2098-02-01T22:00:00Z','2098-02-01T23:00:00Z','PILOT',clock_timestamp())`, [randomUUID(), target.id, locationId]);
+      assert.equal((await post(`${base}/preview`, changed, owner)).json().code, 'HISTORICAL_ENROLLMENT');
+      assert.equal((await pool.query("SELECT count(*) FROM account_profiles WHERE email LIKE 'other-lote-%'")).rows[0].count, '0');
+      const events = JSON.stringify((await pool.query("SELECT details FROM audit_events WHERE action IN ('IMPORT_INVITATIONS_ISSUED','ACCOUNTS_IMPORTED','INVITATION_ISSUED')")).rows);
+      for (const link of [...issued.links, ...replaced.links]) assert.ok(!events.includes(secret(link.url)));
+    });
   } finally {
     await app.close();
     await second.close();

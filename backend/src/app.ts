@@ -11,6 +11,7 @@ import { installationStatus } from './installation.js';
 import { bootstrap, login, authenticate, logout } from './identity/service.js';
 import { requirePermission } from './identity/authorization.js';
 import { registerIdentityManagement } from './identity/management.js';
+import { registerAccountImport } from './identity/import.js';
 import { registerAcademic } from './academic/routes.js';
 import { registerRecurrence } from './academic/recurrence.js';
 import { registerAttendance } from './attendance/routes.js';
@@ -204,6 +205,7 @@ export async function buildApp(config: Config, pool: pg.Pool, options: { logger?
   });
   const sessionToken = (r: import('fastify').FastifyRequest) => r.cookies[cookieName];
   registerIdentityManagement(app, pool, config, sessionToken);
+  registerAccountImport(app, pool, sessionToken, config.publicOrigin);
   registerAcademic(app, pool, sessionToken, config);
   registerRecurrence(app, pool, sessionToken);
   registerAttendance(app, pool, config, sessionToken);

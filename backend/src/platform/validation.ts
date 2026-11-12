@@ -7,6 +7,7 @@ export interface FieldError {
 // Only public form fields are returned. Never serialize Zod input, unknown keys,
 // SQL details or submitted values (which may contain passwords/tokens).
 const labels: Record<string, string> = {
+  csv: 'Dados CSV',
   minutes: 'Duração da chamada (minutos)',
   code: 'Código da chamada',
   geo: 'Localização',

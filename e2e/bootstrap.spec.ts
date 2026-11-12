@@ -483,7 +483,26 @@ test('E0–E3: preparation, attendance, reopening, cancellation and recovery thr
     await recurrence.getByRole('button', { name: 'Confirmar geração das aulas' }).click();
     await expect(recurrence.getByRole('status')).toContainText('Lote concluído');
     await projection.close();
-
+    // E5.2: isolated future enrollment does not change the attendance scenarios above.
+    await page.getByRole('button', { name: 'Contas e convites', exact: true }).click();
+    await page.getByText('Importar contas por CSV', { exact: true }).click();
+    await page.getByLabel('Dados CSV', { exact: true }).fill('nome,email,identificador,papel\nPessoa Importada,import-browser@example.com,,ALUNO');
+    const importOfferings = await (await page.request.get('/api/offerings')).json();
+    await page.getByLabel('Turma do lote (opcional)').selectOption(importOfferings[0].id);
+    await page.getByLabel('Início das matrículas', { exact: true }).fill('2099-01-01T00:00');
+    await page.getByRole('button', { name: 'Visualizar prévia da importação' }).click();
+    await expect(page.getByRole('button', { name: 'Confirmar criação das contas' })).toBeEnabled();
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    await page.screenshot({ path: 'test-results/import-mobile.png', fullPage: true });
+    await page.getByRole('button', { name: 'Confirmar criação das contas' }).click();
+    await page.getByRole('button', { name: 'Gerar convites do lote' }).click();
+    const importLink = page.getByLabel('Pessoa Importada · import-browser@example.com', { exact: true });
+    await expect(importLink).toHaveValue(/#invite=/);
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: 'test-results/import-invitations-mobile.png', fullPage: true });
   } finally {
     await teacherContext.close();
     await studentContext.close();
