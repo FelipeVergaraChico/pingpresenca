@@ -19,6 +19,7 @@ import { registerRecovery } from './identity/recovery.js';
 import { assertSchemaReady } from './db/readiness.js';
 import { demoLease, demoStatus } from './demo/service.js';
 import { registerDemo } from './demo/routes.js';
+import type { MailSender } from './identity/mail.js';
 
 const bootstrapSchema = z.strictObject({
   name: z.string().trim().min(2).max(120),
@@ -34,7 +35,7 @@ const loginSchema = z.strictObject({
   password: z.string().min(1).max(128),
 });
 
-export async function buildApp(config: Config, pool: pg.Pool, options: { logger?: FastifyServerOptions['logger'] } = {}) {
+export async function buildApp(config: Config, pool: pg.Pool, options: { logger?: FastifyServerOptions['logger']; mailSender?: MailSender } = {}) {
   const lease = await demoLease(config);
   const app = Fastify({
     logger: options.logger ?? false,
@@ -204,7 +205,7 @@ export async function buildApp(config: Config, pool: pg.Pool, options: { logger?
     };
   });
   const sessionToken = (r: import('fastify').FastifyRequest) => r.cookies[cookieName];
-  registerIdentityManagement(app, pool, config, sessionToken);
+  registerIdentityManagement(app, pool, config, sessionToken, options.mailSender);
   registerAccountImport(app, pool, sessionToken, config.publicOrigin);
   registerAcademic(app, pool, sessionToken, config);
   registerRecurrence(app, pool, sessionToken);

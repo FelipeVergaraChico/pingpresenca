@@ -40,8 +40,7 @@ function InvitationForToken({ token }: { token: string }) {
       ) : done ? (
         <>
           <p role="status">
-            Sua senha foi definida. Seus papéis e vínculos foram preservados; seu e-mail continua
-            não verificado.
+            Sua senha foi definida. Seus papéis e vínculos foram preservados; {info?.channel === 'EMAIL' ? 'seu e-mail foi verificado.' : 'seu e-mail continua não verificado.'}
           </p>
           <a href="/">Voltar ao acesso da instalação</a>
         </>
@@ -52,8 +51,7 @@ function InvitationForToken({ token }: { token: string }) {
           <h2>{info.name}</h2>
           <p>{info.email}</p>
           <p>
-            Convite entregue manualmente. Aceitar não comprova posse deste e-mail. Se esta não for
-            sua conta, não prossiga.
+            {info.channel === 'EMAIL' ? 'Convite enviado por e-mail. Ao aceitar, você verifica o endereço indicado acima.' : 'Convite entregue manualmente. Aceitar não comprova posse deste e-mail.'} Se esta não for sua conta, não prossiga.
           </p>
           <ActionForm
             submit="Aceitar convite e definir senha"

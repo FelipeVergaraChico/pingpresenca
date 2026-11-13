@@ -1,5 +1,5 @@
 import { FormLabel, ValidationGroup } from '../FormValidation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api, type Account } from '../api';
 import { ActionForm, Field, value } from './Form';
 import type { ManagedAccount, Offering } from './types';
@@ -21,6 +21,14 @@ export function AccountPanel({
 }) {
   const [selected, setSelected] = useState(''),
     [link, setLink] = useState('');
+  const [mail, setMail] = useState<{ enabled: boolean }>();
+  const [mailError, setMailError] = useState('');
+  useEffect(() => {
+    let alive = true;
+    api<{ enabled: boolean }>('/admin/mail-status').then(result => { if (alive) setMail(result); })
+      .catch(() => { if (alive) setMailError('Não foi possível consultar o envio por e-mail. Atualize a página para tentar novamente; o convite manual continua disponível.'); });
+    return () => { alive = false; };
+  }, []);
   const target = accounts.find((a) => a.id === selected),
     owner = actor.roles.includes('OWNER');
   const editable = target && (owner || !target.roles.some((r) => ['OWNER', 'ADMIN'].includes(r)));
@@ -45,9 +53,9 @@ export function AccountPanel({
       <h2>Contas e convites</h2>
       <AccountImportPanel refresh={refresh} offerings={offerings} timeZone={timeZone} />
       <p className="muted">
-        Cadastre, atribua os vínculos na turma e só então entregue o convite. Nenhum e-mail é
-        enviado nesta entrega.
+        Cadastre, atribua os vínculos na turma e só então entregue o convite por link ou e-mail.
       </p>
+      {mailError && <p role="status">{mailError}</p>}
       <FormLabel>
         Selecionar conta
         <select
@@ -173,6 +181,16 @@ export function AccountPanel({
                   >
                     <p>Validade: 48 horas. Uso único. Não verifica a posse do e-mail.</p>
                   </ActionForm>
+                  <h3>Convite por e-mail</h3>
+                  {mail?.enabled ? <ActionForm
+                    submit="Enviar convite por e-mail"
+                    success="Convite aceito pelo servidor de e-mail. Oriente a pessoa a conferir a caixa de entrada e o spam. O endereço só será verificado após o aceite."
+                    onSave={async () => {
+                      setLink('');
+                      await api(`/admin/accounts/${target.id}/email-invitations`, {});
+                    }}>
+                    <p>Enviar para {target.email}. Invalida convites anteriores, inclusive manuais. Se o envio falhar, será necessário emitir outro convite. Validade: 48 horas.</p>
+                  </ActionForm> : <p>{mail ? 'SMTP não configurado. Use o convite manual ou peça ao responsável pela instalação para configurar o envio.' : 'Consultando disponibilidade do envio por e-mail…'}</p>}
                 </>
               )}
             </>

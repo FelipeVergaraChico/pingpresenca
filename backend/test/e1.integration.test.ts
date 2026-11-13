@@ -738,7 +738,7 @@ test('E1 integration: preparation, invitations, scope and integrity in real Post
             .password_hash;
           const events = (await upgradePool.query('SELECT count(*) FROM audit_events')).rows[0]
             .count;
-          assert.deepEqual(await migrate(upgradePool), ['002_academic_preparation.sql','003_attendance.sql','004_pilot_integrity.sql','005_public_demo.sql','006_lesson_recurrence.sql']);
+          assert.deepEqual(await migrate(upgradePool), ['002_academic_preparation.sql','003_attendance.sql','004_pilot_integrity.sql','005_public_demo.sql','006_lesson_recurrence.sql','007_email_invitations.sql']);
           assert.equal(
             (await upgradePool.query('SELECT password_hash FROM accounts')).rows[0].password_hash,
             before,
@@ -764,6 +764,87 @@ test('E1 integration: preparation, invitations, scope and integrity in real Post
         }
       },
     );
+    await t.test('E5.3/A07-A10: SMTP confirma canal sem expor token; aceite verifica somente o destinatário', async () => {
+      let delivered = '';
+      let behavior: () => Promise<void> = async () => {};
+      const mailApp = await buildApp({ ...config, smtp: { host: 'smtp.example.com', port: 587, secure: false, from: 'sender@example.com', user: '', password: '' } }, pool, {
+        mailSender: async message => { delivered = message.url.split('#invite=')[1]!; await behavior(); },
+      });
+      const send = (accountId: string, actor = owner) => post(`/api/admin/accounts/${accountId}/email-invitations`, {}, actor, mailApp);
+      const verified = async (accountId: string) => (await pool.query('SELECT email_verified_at FROM account_profiles WHERE account_id=$1', [accountId])).rows[0].email_verified_at;
+      try {
+        const target = await make('email-invite', ['STUDENT']);
+        const old = await invite(target);
+        assert.equal((await send(target, teacher)).statusCode, 403);
+        assert.equal((await post(`/api/admin/accounts/${target}/email-invitations`, {}, owner)).statusCode, 409);
+        const sent = await send(target);
+        assert.equal(sent.statusCode, 200, sent.body);
+        assert.equal(sent.body.includes(delivered), false);
+        assert.equal(await verified(target), null);
+        assert.equal((await post('/api/invitations/inspect', { token: old })).statusCode, 410);
+        assert.equal((await post('/api/invitations/inspect', { token: delivered })).json().channel, 'EMAIL');
+        assert.equal((await send(target)).statusCode, 429);
+        assert.equal((await post('/api/invitations/accept', { token: delivered, password, channel: 'EMAIL' })).statusCode, 400);
+        const accepts = await Promise.all([post('/api/invitations/accept', { token: delivered, password }), post('/api/invitations/accept', { token: delivered, password }, '', second)]);
+        assert.equal(accepts.filter(r => r.statusCode === 200).length, 1);
+        assert.ok(await verified(target));
+        assert.equal((await send(target)).statusCode, 409);
+
+        const failed = await make('email-failed', ['STUDENT']);
+        behavior = async () => {
+          assert.equal((await post('/api/invitations/inspect', { token: delivered })).statusCode, 410);
+          throw Error('secret SMTP password and token');
+        };
+        const failure = await send(failed);
+        assert.equal(failure.statusCode, 502, failure.body);
+        assert.equal(failure.body.includes('secret SMTP'), false);
+        assert.equal((await post('/api/invitations/inspect', { token: delivered })).statusCode, 410);
+        assert.equal(await verified(failed), null);
+        const fallback = await invite(failed);
+        await okPost('/api/invitations/accept', { token: fallback, password });
+        assert.equal(await verified(failed), null);
+
+        const replaced = await make('email-replaced', ['STUDENT']);
+        let manual = '';
+        behavior = async () => { manual = await invite(replaced); };
+        assert.equal((await send(replaced)).statusCode, 409);
+        assert.equal((await post('/api/invitations/inspect', { token: delivered })).statusCode, 410);
+        assert.equal((await post('/api/invitations/inspect', { token: manual })).statusCode, 200);
+
+        const changed = await make('email-changed', ['STUDENT']);
+        behavior = async () => { await pool.query('UPDATE account_profiles SET email=$2 WHERE account_id=$1', [changed, 'changed-address@example.com']); };
+        assert.equal((await send(changed)).statusCode, 409);
+        assert.equal(await verified(changed), null);
+
+        const changedAfter = await make('email-after-delivery', ['STUDENT']);
+        behavior = async () => {};
+        assert.equal((await send(changedAfter)).statusCode, 200);
+        await pool.query('UPDATE account_profiles SET email=$2 WHERE account_id=$1', [changedAfter, 'other-recipient@example.com']);
+        assert.equal((await post('/api/invitations/accept', { token: delivered, password })).statusCode, 410);
+        assert.equal(await verified(changedAfter), null);
+
+        const promoted = await make('email-promoted', ['STUDENT']);
+        behavior = async () => {
+          const current = (await get('/api/admin/accounts', owner)).json().find((row: { id: string }) => row.id === promoted);
+          await okPost(`/api/admin/accounts/${promoted}/roles`, { roles: ['ADMIN'], version: current.version, reason: 'Teste de promoção durante envio SMTP' }, owner);
+        };
+        assert.equal((await send(promoted)).statusCode, 409);
+        assert.equal((await post('/api/invitations/inspect', { token: delivered })).statusCode, 410);
+
+        const auditTarget = await make('email-audit', ['STUDENT']);
+        behavior = async () => {};
+        await pool.query(`CREATE FUNCTION fail_email_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+          IF NEW.action='INVITATION_EMAIL_SENT' THEN RAISE EXCEPTION 'synthetic failure'; END IF; RETURN NEW; END; $$;
+          CREATE TRIGGER fail_email_audit BEFORE INSERT ON audit_events FOR EACH ROW EXECUTE FUNCTION fail_email_audit()`);
+        try {
+          assert.equal((await send(auditTarget)).statusCode, 502);
+          assert.equal((await post('/api/invitations/inspect', { token: delivered })).statusCode, 410);
+          assert.equal(await verified(auditTarget), null);
+        } finally { await pool.query('DROP TRIGGER fail_email_audit ON audit_events; DROP FUNCTION fail_email_audit()'); }
+        const events = JSON.stringify((await pool.query("SELECT details FROM audit_events WHERE action LIKE 'INVITATION%'")).rows);
+        assert.ok(!events.includes(delivered));
+      } finally { await mailApp.close(); }
+    });
     await t.test('E5.1/A25/A80/D04: prévia, geração atômica, reenvio e preservação das ocorrências', async () => {
       const target = await okPost('/api/offerings', { disciplineId, name: 'Recorrência E5', term: '2027/1', shift: 'Noite', attendanceMode: 'PILOT' }, owner);
       await okPost(`/api/offerings/${target.id}/teachers`, { teacherIds: [teacherId], version: 1 }, owner);

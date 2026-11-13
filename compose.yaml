@@ -16,6 +16,12 @@ x-api-environment: &api-environment
   SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-28800}
   PUBLIC_DEMO: ${PUBLIC_DEMO:-false}
   GEOCODING_URL: ${GEOCODING_URL:-}
+  SMTP_HOST: ${SMTP_HOST:-}
+  SMTP_PORT: ${SMTP_PORT:-587}
+  SMTP_SECURE: ${SMTP_SECURE:-false}
+  SMTP_FROM: ${SMTP_FROM:-}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
 
 services:
   postgres:

@@ -16,6 +16,12 @@ const environment = z.object({
   SESSION_TTL_SECONDS: integer(28800, 60, 86400),
   PUBLIC_DEMO: z.enum(['true', 'false']).default('false'),
   GEOCODING_URL: z.union([z.literal(''), z.url().startsWith('https://')]).default(''),
+  SMTP_HOST: z.string().trim().max(253).default(''),
+  SMTP_PORT: integer(587, 1, 65535),
+  SMTP_SECURE: z.enum(['true', 'false']).default('false'),
+  SMTP_FROM: z.union([z.literal(''), z.email().max(254)]).default(''),
+  SMTP_USER: z.string().default(''),
+  SMTP_PASSWORD: z.string().default(''),
   DATABASE_URL: z.url().optional(),
   POSTGRES_HOST: z.string().default('127.0.0.1'),
   POSTGRES_PORT: integer(54329, 1, 65535),
@@ -31,6 +37,9 @@ export function parseConfig(env: NodeJS.ProcessEnv) {
     throw new Error(`Configuração inválida: ${result.error.issues.map(i => i.path.join('.')).join(', ')}`);
   }
   const e = result.data;
+  if ((e.SMTP_HOST && !e.SMTP_FROM) || (!e.SMTP_HOST && (e.SMTP_FROM || e.SMTP_USER || e.SMTP_PASSWORD)) || (!!e.SMTP_USER !== !!e.SMTP_PASSWORD))
+    throw new Error('Configuração SMTP incompleta: confira SMTP_HOST, SMTP_FROM, SMTP_USER e SMTP_PASSWORD.');
+  if (e.PUBLIC_DEMO === 'true' && e.SMTP_HOST) throw new Error('SMTP não é permitido na demonstração pública.');
   const origin = new URL(e.PUBLIC_ORIGIN);
   if (!['http:', 'https:'].includes(origin.protocol) || origin.origin !== e.PUBLIC_ORIGIN || origin.username || origin.password) {
     throw new Error('PUBLIC_ORIGIN deve ser uma origem HTTP(S), sem caminho ou credenciais');
@@ -63,6 +72,8 @@ export function parseConfig(env: NodeJS.ProcessEnv) {
     bootstrapSecret, sessionTtlSeconds: e.SESSION_TTL_SECONDS,
     publicDemo: e.PUBLIC_DEMO === 'true',
     geocodingUrl: e.GEOCODING_URL,
+    smtp: e.SMTP_HOST ? { host: e.SMTP_HOST, port: e.SMTP_PORT, secure: e.SMTP_SECURE === 'true', from: e.SMTP_FROM,
+      user: e.SMTP_USER, password: e.SMTP_PASSWORD } : undefined,
     database: e.DATABASE_URL ? { connectionString: e.DATABASE_URL } : {
       host: e.POSTGRES_HOST, port: e.POSTGRES_PORT, database: e.POSTGRES_DB,
       user: e.POSTGRES_USER, password: e.POSTGRES_PASSWORD,
