@@ -128,7 +128,7 @@ test('D1: demonstração em PostgreSQL descartável', async t => {
       assert.equal((await pool.query('SELECT 1 FROM attendance_records')).rowCount, 0);
       assert.equal((await pool.query('SELECT 1 FROM auth_sessions')).rowCount, 0);
       assert.equal((await pool.query('SELECT 1 FROM audit_events')).rowCount, 1);
-      assert.equal((await pool.query('SELECT 1 FROM schema_migrations')).rowCount, 6);
+      assert.equal((await pool.query('SELECT 1 FROM schema_migrations')).rowCount, 7);
       app = await buildApp(config, pool);
       assert.equal((await get('/api/auth/me', oldStudent)).statusCode, 401);
     });

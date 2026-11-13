@@ -170,7 +170,63 @@ docker compose stop postgres
 
 ## 2. Produção / servidor com Docker Compose
 
-**Atenção ao estágio do projeto:** este é o procedimento de primeira instalação dos builds da **E3**, não uma declaração de prontidão do MVP para uso acadêmico oficial. Há chamada, reabertura e recuperação assistida; SMTP, gestão completa e distribuição pública permanecem nos próximos marcos. Não use essa base como fonte oficial de frequência.
+**Atenção ao estágio do projeto:** esta base inclui recortes da **E5**, não uma declaração de prontidão do MVP para uso acadêmico oficial. Há chamada, reabertura, recuperação assistida e convites SMTP; gestão completa e distribuição pública ainda estão em desenvolvimento. Não use essa base como fonte oficial de frequência.
+
+### Convites por e-mail (SMTP opcional)
+
+#### Testar sem contratar provedor: caixa local Mailpit
+
+Requer Docker, OpenSSL e dependências instaladas. Não altera seu `.env` nem migra o banco automaticamente. Antes de usar a E5.3 com banco existente, pare as escritas, faça backup e aplique a migration 007 pelo procedimento de atualização.
+
+Pare o `npm run dev`/túnel anterior e execute:
+
+```sh
+npm run dev:mail --registry=https://registry.npmmirror.com
+```
+
+Isso inicia uma caixa Mailpit e a aplicação em `http://localhost:5173`, usando SMTP local com STARTTLS obrigatório. Abra a caixa em **http://127.0.0.1:18025**. Cadastre uma conta sintética (ex.: `aluno@example.com`), envie o convite por e-mail na aplicação, abra a mensagem na caixa e use seu link para definir a senha. Confira que o e-mail não está verificado antes do aceite e fica verificado depois. Mesmo destinatários com endereços reais ficam apenas na caixa local, pois nenhum relay/provedor externo está configurado. Prefira sempre dados fictícios.
+
+Para testar também pelo celular, use `npm run dev:mail:tunnel --registry=https://registry.npmmirror.com` em vez do comando acima e confirme a exposição do app solicitada pelo script ngrok. Os links novos usarão a origem do túnel. A caixa continua somente no PC; não exponha a porta 18025 (mensagens contêm links de acesso).
+
+Comandos adicionais:
+
+```sh
+# Somente a caixa de entrada, sem iniciar a aplicação:
+npm run mail:up --registry=https://registry.npmmirror.com
+# Envia mensagem sintética via SMTP/TLS, sem gravar contas ou gerar convite real:
+npm run mail:check --registry=https://registry.npmmirror.com
+# Para a caixa; não apaga as mensagens:
+npm run mail:stop --registry=https://registry.npmmirror.com
+# Testes do script, sem Docker:
+npm run test:mail-dev --registry=https://registry.npmmirror.com
+```
+
+`Ctrl+C` para a aplicação, mas deixa a caixa disponível até `mail:stop`. Para voltar ao comportamento habitual, execute `npm run dev` ou `npm run dev:tunnel`: os overrides SMTP são exclusivos dos processos iniciados por `dev:mail*`.
+
+Portas fixas: 18025 (interface) e 11025 (SMTP), ambas em loopback. Certificado/chave e mensagens ficam em `.local/mailpit/`, ignorado pelo Git. Certificado válido por 30 dias, confiado apenas pelos processos filhos via `NODE_EXTRA_CA_CERTS`, sem alterar certificados do sistema ou desligar verificação TLS. Após expirar, pare o Mailpit e remova somente `.local/mailpit/certs` para regenerar; preserve `data` se quiser manter mensagens. Não use esse ambiente em produção nem na demo pública. Mensagens podem ser apagadas pela interface Mailpit.
+
+Referência: [SMTP/TLS do Mailpit](https://mailpit.axllent.org/docs/configuration/smtp/). Este teste valida o fluxo local; não valida spam/entregabilidade em provedores externos.
+
+#### Usar um provedor externo
+
+Sem `SMTP_HOST`, continue usando convites manuais. Para envio individual, configure no `.env` do backend:
+
+```dotenv
+SMTP_HOST=smtp.seu-provedor.example
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_FROM=convites@seu-dominio.example
+SMTP_USER=usuario-do-provedor
+SMTP_PASSWORD=senha-ou-senha-de-aplicativo
+```
+
+São exemplos, não credenciais funcionais. Use remetente autorizado e credenciais fornecidas pelo seu provedor; alguns exigem senha de aplicativo. A porta 587 usa STARTTLS obrigatório; para TLS implícito, normalmente 465, use `SMTP_SECURE=true`. Certificado inválido ou ausência de TLS falham com segurança. Usuário/senha podem ficar ambos vazios somente para relay que autorize envio sem autenticação. Não há opção de ignorar certificado. Nunca versione `.env`.
+
+Reinicie a API após configurar; no Compose, recrie o backend (`docker compose up -d --force-recreate backend`). Antes de atualizar banco existente, faça backup e aplique as migrations pelo procedimento documentado; E5.3 requer `007_email_invitations.sql`.
+
+Em **Contas e convites**, selecione uma conta não ativada e clique em **Enviar convite por e-mail**. Envio invalida convites anteriores, mesmo se falhar. Sucesso significa aceite pelo SMTP, não chegada à caixa de entrada; confira spam e configuração de domínio/remetente do provedor. O endereço só é verificado no aceite. Não há reenvio automático: aguarde um minuto para nova emissão ou gere convite manual. Links EMAIL não são exibidos ao administrador. Convites em lote permanecem manuais; contas importadas podem receber e-mail individualmente. SMTP é proibido na demo pública.
+
+Teste isolado do transporte, sem e-mail externo: `npm run test:smtp -w backend --registry=https://registry.npmmirror.com` (requer OpenSSL e porta loopback disponível). Ver [E5.3](docs/entregas/e5-3.md) para limites e teste com provedor real.
 
 ### Pré-requisitos
 

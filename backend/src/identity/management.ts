@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { issueManualInvitation } from './invitations.js';
+import { issueManualInvitation, issueInvitation } from './invitations.js';
+import { createMailSender, type MailSender } from './mail.js';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type pg from 'pg';
 import { z } from 'zod';
@@ -70,6 +71,7 @@ async function validInvitation(c: pg.Pool | pg.PoolClient, token: string) {
     `SELECT i.id,i.account_id,p.name,p.email,i.channel FROM invitations i
     JOIN accounts a ON a.id=i.account_id JOIN account_profiles p ON p.account_id=a.id
     WHERE i.token_hash=$1 AND i.consumed_at IS NULL AND i.revoked_at IS NULL
+    AND (i.channel='MANUAL' OR (i.delivered_at IS NOT NULL AND i.delivered_email=p.email))
     AND i.expires_at>clock_timestamp() AND a.active AND a.password_hash IS NULL`,
     [digest(token)],
   );
@@ -87,7 +89,53 @@ export function registerIdentityManagement(
   pool: pg.Pool,
   config: Config,
   token: (r: FastifyRequest) => string | undefined,
+  sendMail: MailSender = createMailSender(config),
 ) {
+  app.get('/api/admin/mail-status', r => managed(pool, token(r), async (_c, p) => {
+    adminOnly(p);
+    return { enabled: !!config.smtp && !config.publicDemo };
+  }));
+  app.post('/api/admin/accounts/:id/email-invitations', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async r => {
+    const accountId = id.parse((r.params as { id: string }).id);
+    z.strictObject({}).parse(r.body);
+    const pending = await managed(pool, token(r), async (c, p) => {
+      const target = await accountRow(c, accountId);
+      manageTarget(p, target);
+      if (!config.smtp || config.publicDemo) throw new AppError(409, 'SMTP_UNAVAILABLE', 'Envio por e-mail não configurado. Gere um convite manual.');
+      if (target.accepted || !target.active || target.roles.includes('OWNER'))
+        throw new AppError(409, 'NOT_INVITABLE', 'A conta não pode receber convite. Para contas ativadas, use recuperação de acesso.');
+      if ((await c.query("SELECT 1 FROM invitations WHERE account_id=$1 AND channel='EMAIL' AND created_at>clock_timestamp()-interval '1 minute' LIMIT 1", [accountId])).rowCount)
+        throw new AppError(429, 'INVITATION_RATE_LIMIT', 'Aguarde um minuto antes de enviar outro convite por e-mail para esta conta.');
+      const { rows: [profile] } = await c.query('SELECT email FROM account_profiles WHERE account_id=$1', [accountId]);
+      return { ...(await issueInvitation(c, p, accountId, config.publicOrigin, 'EMAIL', profile.email)), email: profile.email as string };
+    });
+    try {
+      await sendMail({ to: pending.email, url: pending.url, installationName: config.installationName });
+      // SMTP has no database transaction. Recheck identity, privileges and replacement after I/O.
+      return await managed(pool, token(r), async (c, p) => {
+        const target = await accountRow(c, accountId);
+        manageTarget(p, target);
+        if (!target.active || target.accepted || target.roles.includes('OWNER')) throw new AppError(409, 'INVITATION_CHANGED', 'A conta mudou durante o envio. Revise antes de emitir outro convite.');
+        const result = await c.query(`UPDATE invitations i SET delivered_at=clock_timestamp()
+          FROM account_profiles p WHERE i.id=$1 AND p.account_id=i.account_id AND p.email=i.delivered_email
+          AND i.revoked_at IS NULL AND i.consumed_at IS NULL AND i.expires_at>clock_timestamp() RETURNING i.id`, [pending.invitationId]);
+        if (!result.rowCount) throw new AppError(409, 'INVITATION_CHANGED', 'O convite foi substituído ou os dados mudaram durante o envio. Use apenas o convite mais recente.');
+        await audit(c, { actorId: p.id, actorRole: p.roles.includes('OWNER') ? 'OWNER' : 'ADMIN', action: 'INVITATION_EMAIL_SENT', targetId: accountId,
+          details: { invitationId: pending.invitationId, channel: 'EMAIL' } });
+        return { sent: true, channel: 'EMAIL', expiresAt: pending.expiresAt };
+      });
+    } catch (error) {
+      await transaction(pool, async c => {
+        await c.query('SELECT pg_advisory_xact_lock(720261002)');
+        await c.query('UPDATE invitations SET revoked_at=COALESCE(revoked_at,clock_timestamp()) WHERE id=$1 AND consumed_at IS NULL', [pending.invitationId]);
+        await c.query(`INSERT INTO audit_events(id,actor_kind,actor_role,action,target_id,details)
+          VALUES($1,'SYSTEM','SYSTEM','INVITATION_EMAIL_FAILED',$2,$3)`,
+          [randomUUID(), accountId, { invitationId: pending.invitationId, channel: 'EMAIL' }]);
+      });
+      if (error instanceof AppError) throw error;
+      throw new AppError(502, 'SMTP_SEND_FAILED', 'Não foi possível confirmar o envio. Emita outro convite ou use o canal manual.');
+    }
+  });
   app.get('/api/admin/accounts', (r) =>
     managed(pool, token(r), async (c, p) => {
       adminOnly(p);
@@ -315,10 +363,6 @@ export function registerIdentityManagement(
       return transaction(pool, async (c) => {
         await c.query('SELECT pg_advisory_xact_lock(720261002)');
         const invitation = await validInvitation(c, input.token);
-        // EMAIL is reserved for an actual delivery implementation, never accepted
-        // from client input. Manual acceptance cannot prove ownership of an email.
-        if (invitation.channel !== 'MANUAL')
-          throw new AppError(409, 'CHANNEL_UNAVAILABLE', 'Canal ainda não disponível.');
         const consumed = await c.query(
           `UPDATE invitations SET consumed_at=clock_timestamp() WHERE id=$1
         AND consumed_at IS NULL AND revoked_at IS NULL AND expires_at>clock_timestamp() RETURNING id`,
@@ -334,6 +378,10 @@ export function registerIdentityManagement(
           invitation.account_id,
           hash,
         ]);
+        if (invitation.channel === 'EMAIL') await c.query(
+          'UPDATE account_profiles SET email_verified_at=clock_timestamp() WHERE account_id=$1 AND email=$2',
+          [invitation.account_id, invitation.email],
+        );
         await c.query(
           'UPDATE invitations SET revoked_at=clock_timestamp() WHERE account_id=$1 AND id<>$2 AND consumed_at IS NULL AND revoked_at IS NULL',
           [invitation.account_id, invitation.id],
@@ -343,7 +391,7 @@ export function registerIdentityManagement(
           actorRole: 'ACCOUNT',
           action: 'INVITATION_ACCEPTED',
           targetId: invitation.account_id,
-          details: { invitationId: invitation.id, channel: 'MANUAL', emailVerified: false },
+          details: { invitationId: invitation.id, channel: invitation.channel, emailVerified: invitation.channel === 'EMAIL' },
         });
         return { accepted: true };
       });
