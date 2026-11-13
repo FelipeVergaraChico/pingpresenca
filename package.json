@@ -13,6 +13,12 @@
   "scripts": {
     "dev": "concurrently -k -n api,web 'npm run dev -w backend' 'npm run dev -w frontend'",
     "dev:tunnel": "node scripts/dev-tunnel.mjs",
+    "mail:up": "node scripts/dev-mail.mjs up",
+    "mail:stop": "node scripts/dev-mail.mjs stop",
+    "mail:check": "node scripts/dev-mail.mjs check",
+    "dev:mail": "node scripts/dev-mail.mjs dev",
+    "dev:mail:tunnel": "node scripts/dev-mail.mjs tunnel",
+    "test:mail-dev": "node --test scripts/dev-mail.test.mjs",
     "recover:owner": "npm run recover:owner -w backend --",
     "test:tunnel": "node --test scripts/dev-tunnel.test.mjs",
     "build": "npm run build --workspaces",

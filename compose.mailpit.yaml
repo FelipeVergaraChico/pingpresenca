@@ -1,0 +1,19 @@
+# Development only. Independent from the application's Compose project/database.
+name: pingpresenca-mail-test
+services:
+  mailpit:
+    image: axllent/mailpit@sha256:aef2aacc11f075ec0fb6874275ee4a421e688e11a96ebb296134d1735c7761ce
+    ports:
+      - "127.0.0.1:18025:8025"
+      - "127.0.0.1:11025:1025"
+    environment:
+      MP_SMTP_TLS_CERT: /certs/cert.pem
+      MP_SMTP_TLS_KEY: /certs/key.pem
+      MP_SMTP_REQUIRE_STARTTLS: "true"
+      MP_SMTP_DISABLE_RDNS: "true"
+      MP_DATABASE: /data/mailpit.db
+      MP_MAX_MESSAGES: "100"
+    volumes:
+      - ./.local/mailpit/certs:/certs:ro
+      - ./.local/mailpit/data:/data
+    restart: "no"
