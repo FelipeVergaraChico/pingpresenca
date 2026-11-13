@@ -1,0 +1,11 @@
+# Convites por SMTP: entrega e verificação são etapas distintas
+
+Adotada na E5.3, em 12/11/2026. O convite EMAIL é persistido antes do envio, mas permanece inutilizável até `delivered_at` ser preenchido. O SMTP ocorre fora da transação administrativa para não manter locks durante I/O. Depois do envio, revalidamos autenticação, hierarquia, conta, endereço, validade e revogação; a ativação do convite e a auditoria de envio são atômicas. Não retornamos seu token à administração.
+
+SMTP e PostgreSQL não compartilham transação. A alternativa de enviar dentro da transação bloquearia operações durante uma falha de rede; fila durável exigiria persistir material recuperável do link e administrar retries. No recorte inicial usamos envio individual, síncrono e limitado, sem reenvio automático. Timeout, falha no envio, falha na auditoria ou reinício entre fases podem deixar um e-mail com link inutilizável: a interface orienta nova emissão explícita ou convite manual. O convite anterior é invalidado já na emissão, mesmo se o novo envio falhar. Nunca reativamos convites antigos.
+
+`delivered_at` significa aceite pelo servidor SMTP, não leitura nem garantia de entrega na caixa de entrada. O aceite do convite EMAIL verifica exclusivamente `delivered_email`, se ainda corresponder ao perfil; aceites manuais não verificam e-mail. Uma mudança de endereço, substituição ou mudança de papéis durante o envio não pode ativar um convite obsoleto. Auditoria armazena IDs/canal/resultados, nunca token, mensagem, endereço ou respostas brutas do provedor.
+
+SMTP é opcional, TLS é obrigatório (implícito ou STARTTLS com certificado válido), timeouts são limitados e logs do transporte ficam desativados. Demonstração pública recusa configuração SMTP. Emissão em lote continua manual neste recorte; administradores podem selecionar contas importadas e enviar individualmente. Recuperação assistida e a exclusividade de recuperação do OWNER por infraestrutura permanecem intactas; recuperação automática por e-mail ainda não foi implementada.
+
+Referências: [SMTP Nodemailer](https://nodemailer.com/smtp), [cancelamento e limite total](https://nodemailer.com/guides/cancelling-a-send). Nodemailer 10.5+ permite cancelar o envio com AbortSignal; um cancelamento não garante que o servidor não recebeu a mensagem, por isso o token sem confirmação local permanece inutilizável.

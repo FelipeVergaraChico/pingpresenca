@@ -160,6 +160,10 @@ Corrigir problemas relevantes observados antes de recomendar uso oficial. A entr
 
 ## E5 — Completar a gestão e as exceções do MVP
 
+**Aceite local da E5.3:** mantenedor confirmou o funcionamento do convite por e-mail na caixa Mailpit e autorizou integração da branch. Validação com provedor externo e leitor de tela continuam pendentes; esse aceite não conclui a E5. Próximo recorte: E5.4, ciclo de contas e turmas.
+
+**E5.3 em 12/11/2026:** convites individuais por SMTP opcional e verificação por canal implementados localmente. [Decisão](adr/0007-convites-email.md) e [entrega/testes](entregas/e5-3.md). Validação de provedor real e leitor de tela permanecem pendentes. Próximo recorte: ciclo de contas/turmas (E5.4), seguido de consolidação manual, exclusões de frequência, recuperação ordinária por e-mail verificado e revisão de dados. E5 ainda não concluída; E6 não iniciada.
+
 **Atualização em 12/11/2026:** mantenedor confirmou programação de aulas e importação de contas funcionando. A importação agora aceita seleção de CSV e colagem de planilhas, com modelo para download, mantendo prévia e confirmação. E5.1/E5.2 com aceite dos fluxos informados; E5 como um todo continua em andamento. Leitor de tela e demais validações não relatadas continuam pendentes. Próximo recorte permanece SMTP opcional/verificação por canal.
 
 **Atualização em 21/10/2026:** E5.2 ampliada com vínculo opcional do lote a uma turma, matrícula temporal, atribuição de professores e emissão/substituição explícita de convites manuais em lote. Validação PostgreSQL retomada com Docker; corrigidas consulta incorreta de versão da política e preparação de papel administrativo no teste anterior. Consulte [ADR 0006](adr/0006-importacao-administrativa.md) e [evidências E5.2](entregas/e5-2.md). Aceite manual ainda pendente. Próximo recorte: SMTP opcional e distinção de verificação por canal; depois ciclo de contas/turmas, consolidação manual, exceções de frequência e revisão final da E5. Não iniciar E6 nem implantar automaticamente na VPS.
