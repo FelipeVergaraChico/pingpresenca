@@ -205,6 +205,27 @@ export function registerAcademic(
       return { updated: true };
     });
   });
+  app.post('/api/offerings/:id/status', async r => {
+    const id = routeId(r);
+    const input = z.strictObject({ active: z.boolean(), version, reason: z.string().trim().max(1000).default('') }).parse(r.body);
+    return managed(pool, token(r), async (c, p) => {
+      adminOnly(p);
+      const before = await teachingOffering(c, p, id);
+      checkVersion(before.version, input.version);
+      if (before.active === input.active) throw new AppError(409, 'VERSION_CONFLICT', 'O estado da turma já mudou. Atualize os dados para revisão.');
+      // Attendance acquires the shared side of managed's exclusive barrier.
+      // Even expired, not-yet-consolidated openings must close before archiving.
+      if (!input.active && (await c.query(`SELECT 1 FROM attendance_openings o
+        JOIN attendance_sessions s ON s.id=o.session_id JOIN lessons l ON l.id=s.lesson_id
+        WHERE l.offering_id=$1 AND o.closed_at IS NULL LIMIT 1`, [id])).rowCount)
+        throw new AppError(409, 'OPEN_ATTENDANCE', 'Encerre as chamadas abertas desta turma antes de arquivá-la.');
+      await c.query('UPDATE offerings SET active=$2,version=version+1 WHERE id=$1', [id, input.active]);
+      await event(c, p, input.active ? 'OFFERING_REACTIVATED' : 'OFFERING_ARCHIVED', id, {
+        before: { active: before.active, version: before.version }, after: { active: input.active, version: before.version + 1 }, reason: input.reason,
+      });
+      return { updated: true };
+    });
+  });
   app.get('/api/offerings/:id/members', (r) =>
     managed(pool, token(r), async (c, p) => {
       const id = routeId(r);
@@ -240,13 +261,14 @@ export function registerAcademic(
       adminOnly(p);
       const offering = await teachingOffering(c, p, id, true);
       checkVersion(offering.version, input.version);
-      for (const teacherId of input.teacherIds) await requiredRole(c, teacherId, 'PROFESSOR');
       const before = (
         await c.query(
           'SELECT account_id FROM offering_teachers WHERE offering_id=$1 ORDER BY account_id',
           [id],
         )
       ).rows.map((v) => v.account_id);
+      // Deactivation preserves existing links; only new assignments require an active account.
+      for (const teacherId of input.teacherIds) if (!before.includes(teacherId)) await requiredRole(c, teacherId, 'PROFESSOR');
       await c.query('DELETE FROM offering_teachers WHERE offering_id=$1', [id]);
       for (const teacherId of input.teacherIds)
         await c.query('INSERT INTO offering_teachers(offering_id,account_id) VALUES ($1,$2)', [

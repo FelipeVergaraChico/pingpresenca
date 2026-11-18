@@ -17,6 +17,6 @@ test('DEMO-03: allowlist de escrita não concede novas rotas automaticamente', (
   for (const path of ['/api/lessons', '/api/lessons/:id', '/api/attendance/:id/confirm', '/api/attendance/:id/reopen'])
     assert.equal(demoWriteAllowed(path), true);
   for (const path of ['/api/bootstrap', '/api/auth/login', '/api/admin/accounts', '/api/recovery/complete',
-    '/api/offerings/:id/enrollments', '/api/attendance/settings', '/api/future-route'])
+    '/api/offerings/:id/status', '/api/admin/accounts/:id/status', '/api/offerings/:id/enrollments', '/api/attendance/settings', '/api/future-route'])
     assert.equal(demoWriteAllowed(path), false);
 });

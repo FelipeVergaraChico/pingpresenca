@@ -142,11 +142,42 @@ export function registerIdentityManagement(
       return (
         await c.query(`SELECT a.id,a.version,a.active,a.password_hash IS NOT NULL AS accepted,
       p.name,p.email,p.institutional_id,p.email_verified_at,
+      (SELECT count(*)::int FROM enrollments e WHERE e.account_id=a.id
+        AND e.enrolled_at<=clock_timestamp() AND (e.ended_at IS NULL OR e.ended_at>clock_timestamp())) AS active_enrollment_count,
       ARRAY(SELECT role FROM account_roles WHERE account_id=a.id ORDER BY role) AS roles
       FROM accounts a JOIN account_profiles p ON p.account_id=a.id ORDER BY p.name,a.id`)
       ).rows;
     }),
   );
+  app.post('/api/admin/accounts/:id/status', async r => {
+    const accountId = id.parse((r.params as { id: string }).id);
+    const input = z.strictObject({ active: z.boolean(), version, reason,
+      activeEnrollmentCount: z.number().int().nonnegative() }).parse(r.body);
+    return managed(pool, token(r), async (c, p) => {
+      const target = await accountRow(c, accountId);
+      manageTarget(p, target);
+      if (target.roles.includes('OWNER')) throw new AppError(403, 'OWNER_PROTECTED', 'O único owner não pode ser desativado ou substituído por este fluxo.');
+      checkVersion(target.version, input.version);
+      if (target.active === input.active) throw new AppError(409, 'VERSION_CONFLICT', 'O estado da conta já mudou. Atualize os dados para revisão.');
+      // Also locks against concurrent login, which rechecks active under FOR UPDATE.
+      await c.query('SELECT id FROM accounts WHERE id=$1 FOR UPDATE', [accountId]);
+      const count = (await c.query(`SELECT count(*)::int AS n FROM enrollments WHERE account_id=$1
+        AND enrolled_at<=clock_timestamp() AND (ended_at IS NULL OR ended_at>clock_timestamp())`, [accountId])).rows[0].n;
+      if (!input.active && count !== input.activeEnrollmentCount)
+        throw new AppError(409, 'VERSION_CONFLICT', 'As matrículas vigentes mudaram. Atualize os dados e revise as consequências antes de desativar.');
+      await c.query('UPDATE accounts SET active=$2,version=version+1 WHERE id=$1', [accountId, input.active]);
+      if (!input.active) {
+        await c.query('UPDATE auth_sessions SET revoked_at=clock_timestamp() WHERE account_id=$1 AND revoked_at IS NULL', [accountId]);
+        await c.query('UPDATE invitations SET revoked_at=clock_timestamp() WHERE account_id=$1 AND consumed_at IS NULL AND revoked_at IS NULL', [accountId]);
+        await c.query('UPDATE password_recoveries SET revoked_at=clock_timestamp() WHERE (account_id=$1 OR initiated_by=$1) AND consumed_at IS NULL AND revoked_at IS NULL', [accountId]);
+        await c.query('UPDATE attendance_authorizations SET expires_at=LEAST(expires_at,clock_timestamp()) WHERE account_id=$1', [accountId]);
+      }
+      await audit(c, { actorId: p.id, actorRole: p.roles.includes('OWNER') ? 'OWNER' : 'ADMIN',
+        action: input.active ? 'ACCOUNT_REACTIVATED' : 'ACCOUNT_DEACTIVATED', targetId: accountId,
+        details: { before: { active: target.active, version: target.version }, after: { active: input.active, version: target.version + 1 }, reason: input.reason, activeEnrollmentCount: count, enrollmentsChanged: false } });
+      return { updated: true };
+    });
+  });
   app.get('/api/admin/settings', (r) =>
     managed(pool, token(r), async (c, p) => {
       adminOnly(p);

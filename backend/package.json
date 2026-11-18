@@ -16,7 +16,7 @@
     "test": "tsx --test test/unit.test.ts test/*.unit.test.ts",
     "test:pilot": "tsx --test test/e3.integration.test.ts",
     "test:demo:integration": "tsx --test test/demo.integration.test.ts",
-    "test:integration": "tsx --test test/integration.test.ts && tsx --test test/e1.integration.test.ts && tsx --test test/e2.integration.test.ts && tsx --test test/e3.integration.test.ts"
+    "test:integration": "tsx --test test/integration.test.ts && tsx --test test/e1.integration.test.ts && tsx --test test/e2.integration.test.ts && tsx --test test/e3.integration.test.ts && tsx --test test/e5-4.integration.test.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",
