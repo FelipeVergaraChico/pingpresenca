@@ -170,6 +170,8 @@ As verificações manuais abaixo complementam testes automáticos; ferramenta au
 
 ## 10. Evidência de conclusão
 
+E5.4: cenários A05/A16/A17/A22–A24/A29/A30/A43/A54/A55 exercitados no ciclo de contas/turmas e nas regressões de matrícula, com evidências e limites em [E5.4](entregas/e5-4.md). Validação humana e leitor de tela não são substituídos por automação; esta entrega não conclui a E5.
+
 O marco adicional D1 tem os cenários [DEMO-01 a DEMO-07](demonstracao-publica.md), sem substituir nem aprovar implicitamente os cenários A01–A95.
 
 Cada entrega deve apontar quais cenários comprovou, com versão do código e tipo de evidência: teste automatizado, verificação manual, relatório de carga ou ensaio operacional. Cenários adiados continuam pendentes; não devem ser marcados como aprovados por estarem descritos aqui.

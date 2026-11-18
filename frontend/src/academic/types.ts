@@ -8,6 +8,7 @@ export interface ManagedAccount {
   institutional_id: string | null;
   email_verified_at: string | null;
   version: number;
+  active_enrollment_count?: number;
 }
 export interface Discipline {
   id: string;

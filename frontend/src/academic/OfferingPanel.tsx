@@ -100,11 +100,11 @@ export function OfferingPanel({
         Selecionar turma
         <select value={selected} onChange={(e) => select(e.target.value)}>
           <option value="">{admin ? 'Nova turma' : 'Selecione uma turma'}</option>
-          {offerings.map((o) => (
+          {[true, false].map(active => <optgroup key={String(active)} label={active ? 'Turmas ativas' : 'Turmas arquivadas'}>{offerings.filter(o => o.active === active).map((o) => (
             <option key={o.id} value={o.id}>
               {o.name} · {o.attendance_mode === 'PILOT' ? 'Piloto' : 'Oficial'}
             </option>
-          ))}
+          ))}</optgroup>)}
         </select>
       </FormLabel>
       {error && (
@@ -168,7 +168,19 @@ export function OfferingPanel({
               {offering.attendance_mode === 'PILOT' ? 'Piloto / teste' : 'Oficial'}
             </span>
           </div>
-          {admin && (
+          {!offering.active && <p className="message">Turma arquivada: novas atividades estão bloqueadas. Matrículas, aulas e histórico foram preservados; consultas e correções de presença continuam disponíveis.</p>}
+          {admin && !publicDemo && <details>
+            <summary>{offering.active ? 'Arquivar turma' : 'Reativar turma'}</summary>
+            <ActionForm key={`status-${offering.id}-${offering.version}`} submit={offering.active ? 'Confirmar arquivamento' : 'Confirmar reativação'}
+              onConflict={() => void refresh()} onSave={async data => {
+                await api(`/offerings/${offering.id}/status`, { active: !offering.active, version: offering.version, reason: value(data, 'reason') });
+                return reload;
+              }}>
+              <p>{offering.active ? 'Encerre todas as chamadas antes de arquivar. A operação não encerra matrículas, cancela aulas nem apaga registros.' : 'Reativar libera novas atividades, mas não reabre matrículas encerradas nem restaura aulas canceladas.'}</p>
+              <Field label="Justificativa do estado da turma (opcional)" name="reason" required={false} maxLength={1000} />
+            </ActionForm>
+          </details>}
+          {admin && offering.active && (
             <details>
               <summary>Editar dados da turma</summary>
               <ActionForm
@@ -206,7 +218,7 @@ export function OfferingPanel({
                   ))}
                 </ul>
                 {!members.teachers.length && <p>Nenhum professor vinculado.</p>}
-                {admin && (
+                {admin && offering.active && (
                   <ActionForm
                     key={`teachers-${offering.id}-${offering.version}-${members.teachers.map((t) => t.account_id).join(',')}`}
                     submit="Salvar professores"
@@ -221,7 +233,7 @@ export function OfferingPanel({
                   >
                     <ValidationGroup name="teacherIds" legend="Professores desta turma">
                       {accounts
-                        .filter((a) => a.roles.includes('PROFESSOR') && a.active)
+                        .filter((a) => a.roles.includes('PROFESSOR') && (a.active || members.teachers.some(t => t.account_id === a.id)))
                         .map((a) => (
                           <FormLabel className="checkbox-label" key={a.id}>
                             <input
@@ -230,7 +242,7 @@ export function OfferingPanel({
                               value={a.id}
                               defaultChecked={members.teachers.some((t) => t.account_id === a.id)}
                             />
-                            {a.name}
+                            {a.name}{!a.active ? ' · Conta desativada (vínculo preservado)' : ''}
                           </FormLabel>
                         ))}
                     </ValidationGroup>
@@ -272,7 +284,7 @@ export function OfferingPanel({
                     )}
                   </div>
                 ))}
-                {admin && (
+                {admin && offering.active && (
                   <>
                     <h4>Matricular aluno</h4>
                     <ActionForm
@@ -325,7 +337,7 @@ export function OfferingPanel({
           ]}>
             {tab === 'frequency' && offering.can_view_history
               ? <History key={offering.id} offeringId={offering.id} timeZone={timeZone} />
-              : <LessonList key={`${offering.id}-${tab}`} offeringId={offering.id} manages={offering.can_manage} scope={tab}
+              : <LessonList key={`${offering.id}-${tab}`} offeringId={offering.id} manages={offering.can_manage} canEdit={offering.active} scope={tab}
                 timeZone={timeZone} revision={revision} onEdit={(l) => {
                   previewRequest.current++; setEditing(l); setPreview(null);
                   document.getElementById('lesson-editor')?.scrollIntoView?.({ behavior: 'smooth' });

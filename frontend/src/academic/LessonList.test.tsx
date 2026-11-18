@@ -11,6 +11,14 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 const json = (data: unknown) => new Response(JSON.stringify(data));
 const row = (title: string) => ({id:title,title,starts_at:'2026-09-01T12:00:00Z',ends_at:'2026-09-01T13:00:00Z',attendance_mode:'PILOT',attendance_status:'NOT_OPENED',location_name:'Sala A'});
 const props = {offeringId:'a',manages:true,scope:'upcoming',timeZone:'America/Sao_Paulo',revision:0,onEdit:vi.fn(),onPreview:vi.fn()};
+test('A29: turma arquivada mantém gestão histórica sem oferecer edição de planejamento', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => json({ items: [row('Histórica')], pagination: { page: 1, pages: 1, pageSize: 10, total: 1 } })));
+  render(<LessonList {...props} canEdit={false} />);
+  await screen.findByRole('heading', { name: 'Histórica' });
+  expect(screen.queryByRole('button', { name: 'Editar Histórica' })).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /Gerenciar chamada/ })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Elegibilidade de Histórica' })).toBeInTheDocument();
+});
 test('LIST-02: pages and combined filters request the backend; filters reset page without hiding errors', async () => {
   const fetch = vi.fn(async (url: string) => {
     const q = new URL(url,'https://test.local').searchParams;

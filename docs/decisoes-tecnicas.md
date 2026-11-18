@@ -141,6 +141,8 @@ Estas questões não impedem a consolidação do plano. Devem ser resolvidas **a
 
 ## 10. Registro de decisão por implementação
 
+E5.4: [ciclo de contas e turmas](entregas/e5-4.md) resolve o recorte de D06 relativo a desativação/reativação: owner protegido, motivo obrigatório para contas, reativação sem restaurar sessões/links e preservação integral de vínculos. Arquivamento usa justificativa opcional e exige todas as aberturas fechadas/consolidadas. D05 continua pendente para o futuro fluxo de consolidação manual; troca de e-mail e transferência de owner não são introduzidas.
+
 E5.3: [ADR 0007 — convites por e-mail](adr/0007-convites-email.md) define envio fora da transação, confirmação de entrega persistida e verificação exclusivamente no aceite do destinatário correspondente. SMTP opcional sem fila e sem reenvio automático; canal manual preservado.
 
 E5.1: [ADR 0005 — geração recorrente](adr/0005-geracao-recorrente.md) resolve D04 para aulas e complementa D07 para conversão de recorrência no fuso. E5.2: [ADR 0006 — importação administrativa](adr/0006-importacao-administrativa.md) resolve D04 para criação de contas com vínculos e emissão explícita de convites, sem atualização automática de contas existentes.

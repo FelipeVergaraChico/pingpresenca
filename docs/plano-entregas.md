@@ -160,6 +160,10 @@ Corrigir problemas relevantes observados antes de recomendar uso oficial. A entr
 
 ## E5 — Completar a gestão e as exceções do MVP
 
+**Aceite local da E5.4 em 18/11/2026:** mantenedor confirmou funcionamento e autorizou revisão final e integração. O aceite cobre o ciclo de contas/turmas; leitor de tela e SMTP externo continuam pendentes. Próximo recorte permanece consolidação inteiramente manual (D01/D05). E5 não concluída; E6 não iniciada.
+
+**E5.4 em 12/11/2026:** ciclo de contas e turmas implementado localmente, com preservação de vínculos, revogação de acesso, proteção do owner, arquivamento/reativação e testes de concorrência/auditoria. Execuções e limitações em [E5.4](entregas/e5-4.md). Aceite humano deste recorte ainda pendente. Próximo recorte: consolidação inteiramente manual para aulas nunca abertas (D01/D05); não iniciar E6 nem implantar automaticamente.
+
 **Aceite local da E5.3:** mantenedor confirmou o funcionamento do convite por e-mail na caixa Mailpit e autorizou integração da branch. Validação com provedor externo e leitor de tela continuam pendentes; esse aceite não conclui a E5. Próximo recorte: E5.4, ciclo de contas e turmas.
 
 **E5.3 em 12/11/2026:** convites individuais por SMTP opcional e verificação por canal implementados localmente. [Decisão](adr/0007-convites-email.md) e [entrega/testes](entregas/e5-3.md). Validação de provedor real e leitor de tela permanecem pendentes. Próximo recorte: ciclo de contas/turmas (E5.4), seguido de consolidação manual, exclusões de frequência, recuperação ordinária por e-mail verificado e revisão de dados. E5 ainda não concluída; E6 não iniciada.
