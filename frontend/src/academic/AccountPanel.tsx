@@ -68,7 +68,7 @@ export function AccountPanel({
           <option value="">Nova conta</option>
           {accounts.map((a) => (
             <option value={a.id} key={a.id}>
-              {a.name} · {a.email}
+              {a.name} · {a.email}{!a.active ? ' · Desativada' : ''}
             </option>
           ))}
         </select>
@@ -112,10 +112,30 @@ export function AccountPanel({
           <p>{target.email}</p>
           <p className="badge">
             {target.roles.join(' + ')} ·{' '}
-            {target.accepted ? 'Acesso ativado' : 'Aguardando convite/aceite'}
+            {!target.active ? 'Conta desativada' : target.accepted ? 'Acesso ativado' : 'Aguardando convite/aceite'}
           </p>
           <p>E-mail {target.email_verified_at ? 'verificado' : 'não verificado'}</p>
-          {editable && target.accepted && !target.roles.includes('OWNER') && <RecoveryIssuer key={target.id} accountId={target.id} />}
+          {editable && target.active && target.accepted && !target.roles.includes('OWNER') && <RecoveryIssuer key={target.id} accountId={target.id} />}
+          {editable && !target.roles.includes('OWNER') && (
+            <details>
+              <summary>{target.active ? 'Desativar acesso da conta' : 'Reativar acesso da conta'}</summary>
+              <ActionForm submit={target.active ? 'Confirmar desativação' : 'Confirmar reativação'}
+                onConflict={() => void refresh()}
+                onSave={async data => {
+                  await api(`/admin/accounts/${target.id}/status`, { active: !target.active, version: target.version,
+                    reason: value(data, 'reason'), activeEnrollmentCount: target.active_enrollment_count ?? 0 });
+                  setLink('');
+                  return refresh;
+                }}>
+                {target.active ? <p className="message">
+                  Esta conta possui {target.active_enrollment_count ?? 0} matrícula(s) vigente(s). Desativar o acesso não encerrará essas matrículas:
+                  o aluno continuará sendo considerado nas chamadas e poderá receber faltas.
+                  Sessões, convites, recuperações e autorizações de presença serão invalidados. Papéis e histórico serão preservados.
+                </p> : <p className="message">Reativar permite um novo login, mas não restaura sessões, convites ou links anteriores, nem altera matrículas e histórico. Se o cadastro não foi aceito, gere um novo convite.</p>}
+                <Field label="Justificativa da alteração de acesso" name="reason" maxLength={1000} />
+              </ActionForm>
+            </details>
+          )}
           {editable ? (
             <>
               <ActionForm
@@ -160,7 +180,7 @@ export function AccountPanel({
                   de revisar os vínculos.
                 </p>
               </ActionForm>
-              {!target.accepted && (
+              {target.active && !target.accepted && (
                 <>
                   <h3>Convite manual</h3>
                   <p>

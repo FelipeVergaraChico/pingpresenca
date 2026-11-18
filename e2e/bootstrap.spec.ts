@@ -503,6 +503,39 @@ test('E0–E3: preparation, attendance, reopening, cancellation and recovery thr
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: 'test-results/import-invitations-mobile.png', fullPage: true });
+    // E5.4: visible consequences, keyboard action, account and offering lifecycle.
+    await page.getByLabel('Selecionar conta').selectOption({ label: 'Estudante piloto · estudante@example.com' });
+    await page.getByText('Desativar acesso da conta', { exact: true }).click();
+    await expect(page.getByText(/Esta conta possui 1 matrícula/)).toBeVisible();
+    await page.getByLabel('Justificativa da alteração de acesso').fill('Teste sintético de desativação');
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: 'test-results/e54-account-mobile.png', fullPage: true });
+    await page.getByRole('button', { name: 'Confirmar desativação' }).focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByText('Conta desativada', { exact: false })).toBeVisible();
+    expect((await student.request.get('/api/auth/me')).status()).toBe(401);
+    await page.getByText('Reativar acesso da conta', { exact: true }).click();
+    await page.getByLabel('Justificativa da alteração de acesso').fill('Teste sintético de reativação');
+    await page.getByRole('button', { name: 'Confirmar reativação' }).click();
+    await expect(page.getByText('Desativar acesso da conta', { exact: true })).toBeVisible();
+    expect((await student.request.get('/api/auth/me')).status()).toBe(401);
+    await page.getByRole('button', { name: 'Turmas e aulas', exact: true }).click();
+    await page.getByLabel('Selecionar turma').selectOption(importOfferings[0].id);
+    await page.getByText('Arquivar turma', { exact: true }).click();
+    await page.getByRole('button', { name: 'Confirmar arquivamento' }).click();
+    await expect(page.getByText(/Turma arquivada: novas atividades/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Matricular aluno', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Criar aula', exact: true })).toHaveCount(0);
+    await expect(page.locator('.lesson-row').getByRole('button', { name: /^Editar / })).toHaveCount(0);
+    // The disclosure remains open after the state refresh; don't toggle it closed.
+    if (!(await page.getByRole('button', { name: 'Confirmar reativação' }).isVisible()))
+      await page.getByText('Reativar turma', { exact: true }).click();
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: 'test-results/e54-offering-mobile.png', fullPage: true });
+    await page.getByRole('button', { name: 'Confirmar reativação' }).click();
+    await expect(page.getByRole('button', { name: 'Criar aula', exact: true })).toBeVisible();
   } finally {
     await teacherContext.close();
     await studentContext.close();
